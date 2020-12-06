@@ -125,19 +125,6 @@ var AICenter = nil;
 		
 		me["VS_box"].setTranslation(0, vs_digit.getValue());
 		
-		var vs_pfd_cur = ap_vs_pfd.getValue();
-		if (vs_pfd_cur < 2) {
-			me["VS_box"].hide();
-		} else {
-			me["VS_box"].show();
-		}
-		
-		if (vs_pfd_cur < 10) {
-			me["VS_digit"].setText(sprintf("%02d", "0" ~ vs_pfd_cur));
-		} else {
-			me["VS_digit"].setText(sprintf("%02d", vs_pfd_cur));
-		}
-		
 		var vs_itaf = fmgc.Internal.vs.getValue();
 		var gearAgl = gear_agl.getValue();
 		
@@ -151,69 +138,11 @@ var AICenter = nil;
 			me["VS_pointer"].setColorFill(0.0509,0.7529,0.2941);
 		}
 		
-		# ILS		
-		me["LOC_pointer"].setTranslation(loc.getValue() * 197, 0);	
-		me["GS_pointer"].setTranslation(0, gs.getValue() * -197);
 		
 		# Heading
-		me.heading = hdg_scale.getValue();
-		me.headOffset = me.heading / 10 - int(me.heading / 10);
-		me.middleText = roundabout(me.heading / 10);
-		me.middleOffset = nil;
-		if(me.middleText == 36) {
-			me.middleText = 0;
-		}
-		me.leftText1 = me.middleText == 0?35:me.middleText - 1;
-		me.rightText1 = me.middleText == 35?0:me.middleText + 1;
-		me.leftText2 = me.leftText1 == 0?35:me.leftText1 - 1;
-		me.rightText2 = me.rightText1 == 35?0:me.rightText1 + 1;
-		me.leftText3 = me.leftText2 == 0?35:me.leftText2 - 1;
-		me.rightText3 = me.rightText2 == 35?0:me.rightText2 + 1;
-		if (me.headOffset > 0.5) {
-			me.middleOffset = -(me.headOffset - 1) * 98.5416;
-		} else {
-			me.middleOffset = -me.headOffset * 98.5416;
-		}
-		me["HDG_scale"].setTranslation(me.middleOffset, 0);
-		me["HDG_scale"].update();
-		me["HDG_four"].setText(sprintf("%d", me.middleText));
-		me["HDG_five"].setText(sprintf("%d", me.rightText1));
-		me["HDG_three"].setText(sprintf("%d", me.leftText1));
-		me["HDG_six"].setText(sprintf("%d", me.rightText2));
-		me["HDG_two"].setText(sprintf("%d", me.leftText2));
-		me["HDG_seven"].setText(sprintf("%d", me.rightText3));
-		me["HDG_one"].setText(sprintf("%d", me.leftText3));
 		
-		me["HDG_four"].setFontSize(fontSizeHDG(me.middleText), 1);
-		me["HDG_five"].setFontSize(fontSizeHDG(me.rightText1), 1);
-		me["HDG_three"].setFontSize(fontSizeHDG(me.leftText1), 1);
-		me["HDG_six"].setFontSize(fontSizeHDG(me.rightText2), 1);
-		me["HDG_two"].setFontSize(fontSizeHDG(me.leftText2), 1);
-		me["HDG_seven"].setFontSize(fontSizeHDG(me.rightText3), 1);
-		me["HDG_one"].setFontSize(fontSizeHDG(me.leftText3), 1);
 		
-		show_hdg_act = show_hdg.getValue();
-		hdg_diff_act = hdg_diff.getValue();
-		if (show_hdg_act == 1 and hdg_diff_act >= -23.62 and hdg_diff_act <= 23.62) {
-			me["HDG_target"].setTranslation((hdg_diff_act / 10) * 98.5416, 0);
-			me["HDG_digit_L"].hide();
-			me["HDG_digit_R"].hide();
-			me["HDG_target"].show();
-		} else if (show_hdg_act == 1 and hdg_diff_act < -23.62 and hdg_diff_act >= -180) {
-			me["HDG_digit_L"].setText(sprintf("%3.0f", ap_hdg.getValue()));
-			me["HDG_digit_L"].show();
-			me["HDG_digit_R"].hide();
-			me["HDG_target"].hide();
-		} else if (show_hdg_act == 1 and hdg_diff_act > 23.62 and hdg_diff_act <= 180) {
-			me["HDG_digit_R"].setText(sprintf("%3.0f", ap_hdg.getValue()));
-			me["HDG_digit_R"].show();
-			me["HDG_digit_L"].hide();
-			me["HDG_target"].hide();
-		} else {
-			me["HDG_digit_L"].hide();
-			me["HDG_digit_R"].hide();
-			me["HDG_target"].hide();
-		}
+			
 		
 
 		var heading_deg = heading.getValue();
@@ -263,9 +192,6 @@ var AICenter = nil;
 		}
 
 		# AI HDG
-		me.AI_horizon_hdg_trans.setTranslation(me.middleOffset, horizon_pitch.getValue() * 11.825);
-		me.AI_horizon_hdg_rot.setRotation(-roll_cur * D2R, me["AI_center"].getCenter());
-		me["AI_heading"].update();
 	},
 
 };

@@ -1811,6 +1811,7 @@
 		</mk-viii>
 		
 		<pfd n="0">
+			<hdg-diff type="double">0</hdg-diff>
 			<hundred-above type="int">99999</hundred-above>
 			<minimums type="int">99999</minimums>
 		</pfd>

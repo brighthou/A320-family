@@ -17,17 +17,12 @@ var altitude_pfd = props.globals.getNode("/instrumentation/altimeter/indicated-a
 var ap_alt = props.globals.getNode("/it-autoflight/internal/alt", 1);
 var vs_needle = props.globals.getNode("/instrumentation/pfd/vs-needle", 1);
 var vs_digit = props.globals.getNode("/instrumentation/pfd/vs-digit-trans", 1);
-var ap_vs_pfd = props.globals.getNode("/it-autoflight/internal/vert-speed-fpm-pfd", 1);
 var ind_spd_kt = props.globals.getNode("/instrumentation/airspeed-indicator/indicated-speed-kt", 1);
 var ind_spd_mach = props.globals.getNode("/instrumentation/airspeed-indicator/indicated-mach", 1);
 var at_mach_mode = props.globals.getNode("/it-autoflight/input/kts-mach", 1);
 var at_input_spd_mach = props.globals.getNode("/it-autoflight/input/mach", 1);
 var at_input_spd_kts = props.globals.getNode("/it-autoflight/input/kts", 1);
 var decision = props.globals.getNode("/instrumentation/mk-viii/inputs/arinc429/decision-height", 1);
-var loc = props.globals.getNode("/instrumentation/nav[0]/heading-needle-deflection-norm", 1);
-var gs = props.globals.getNode("/instrumentation/nav[0]/gs-needle-deflection-norm", 1);
-var show_hdg = props.globals.getNode("/it-autoflight/custom/show-hdg", 1);
-var ap_hdg = props.globals.getNode("/it-autoflight/input/hdg", 1);
 var ap_trk_sw = props.globals.getNode("/it-autoflight/custom/trk-fpa", 1);
 var loc_in_range = props.globals.getNode("/instrumentation/nav[0]/in-range", 1);
 var gs_in_range = props.globals.getNode("/instrumentation/nav[0]/gs-in-range", 1);
@@ -82,9 +77,6 @@ var du6_offtime = props.globals.initNode("/instrumentation/du/du6-off-time", 0.0
 
 var alt_diff = props.globals.initNode("/instrumentation/pfd/alt-diff", 0.0, "DOUBLE");
 var heading = props.globals.initNode("/instrumentation/pfd/heading-deg", 0.0, "DOUBLE");
-var horizon_pitch = props.globals.initNode("/instrumentation/pfd/horizon-pitch", 0.0, "DOUBLE");
-var horizon_ground = props.globals.initNode("/instrumentation/pfd/horizon-ground", 0.0, "DOUBLE");
-var hdg_diff = props.globals.initNode("/instrumentation/pfd/hdg-diff", 0.0, "DOUBLE");
 var hdg_scale = props.globals.initNode("/instrumentation/pfd/heading-scale", 0.0, "DOUBLE");
 var track = props.globals.initNode("/instrumentation/pfd/track-deg", 0.0, "DOUBLE");
 #var track_diff = props.globals.initNode("/instrumentation/pfd/track-hdg-diff", 0.0, "DOUBLE"); # returns incorrect value
@@ -172,6 +164,8 @@ var canvas_PFD = {
 		obj.AI_fpv_trans = obj["FPV"].createTransform();
 		obj.AI_fpv_rot = obj["FPV"].createTransform();
 		
+		obj.middleOffset = nil;
+		
 		obj.page = obj.group;
 		
 		obj.update_items_fast = [
@@ -189,6 +183,7 @@ var canvas_PFD = {
 				obj.AI_horizon_sky_rot.setRotation(-val * D2R, obj["AI_center"].getCenter());
 				obj["AI_bank"].setRotation(-val * D2R);
 				obj["AI_agl_g"].setRotation(-val * D2R);
+				obj.AI_horizon_hdg_rot.setRotation(-val * D2R, obj["AI_center"].getCenter());
 			}),
 			props.UpdateManager.FromHashValue("fdRoll", nil, func(val) {
 				if (val != nil) {
@@ -197,6 +192,17 @@ var canvas_PFD = {
 			}),
 			props.UpdateManager.FromHashValue("horizonGround", nil, func(val) {
 				obj.AI_horizon_ground_trans.setTranslation(0, val * 11.825);
+			}),
+			props.UpdateManager.FromHashValue("horizonPitch", nil, func(val) {
+				if (obj.middleOffset != nil) {
+					obj.AI_horizon_hdg_trans.setTranslation(obj.middleOffset, val * 11.825);
+				}
+			}),
+			props.UpdateManager.FromHashValue("loc", nil, func(val) {
+				obj["LOC_pointer"].setTranslation(val * 197, 0);	
+			}),
+			props.UpdateManager.FromHashValue("gs", nil, func(val) {
+				obj["GS_pointer"].setTranslation(val * 197, 0);	
 			}),
 			props.UpdateManager.FromHashValue("slipSkid", nil, func(val) {
 				obj["AI_slipskid"].setTranslation(math.clamp(val, -15, 15) * 7, 0);
@@ -209,7 +215,79 @@ var canvas_PFD = {
 				}
 			}),
 			props.UpdateManager.FromHashValue("gearAglFt", 1, func(val) {
-				obj["AI_agl"].setText(sprintf("%s", math.round(math.clamp(val, 0, 2500))));
+				obj["AI_agl"].setText(sprintf("%s", math.round(math.clamp(val, 0, 2500),10)));
+			}),
+			props.UpdateManager.FromHashValue("hdg_scale", nil, func(val) {
+				obj.heading = hdg_scale.getValue();
+				obj.headOffset = obj.heading / 10 - int(obj.heading / 10);
+				obj.middleText = roundabout(obj.heading / 10);
+				obj.middleOffset = nil;
+				if (obj.middleText == 36) {
+					obj.middleText = 0;
+				}
+				obj.leftText1 = obj.middleText == 0?35:obj.middleText - 1;
+				obj.rightText1 = obj.middleText == 35?0:obj.middleText + 1;
+				obj.leftText2 = obj.leftText1 == 0?35:obj.leftText1 - 1;
+				obj.rightText2 = obj.rightText1 == 35?0:obj.rightText1 + 1;
+				obj.leftText3 = obj.leftText2 == 0?35:obj.leftText2 - 1;
+				obj.rightText3 = obj.rightText2 == 35?0:obj.rightText2 + 1;
+				if (obj.headOffset > 0.5) {
+					obj.middleOffset = -(obj.headOffset - 1) * 98.5416;
+				} else {
+					obj.middleOffset = -obj.headOffset * 98.5416;
+				}
+				obj["HDG_scale"].setTranslation(obj.middleOffset, 0);
+				obj["HDG_scale"].update();
+				obj["HDG_four"].setText(sprintf("%d", obj.middleText));
+				obj["HDG_five"].setText(sprintf("%d", obj.rightText1));
+				obj["HDG_three"].setText(sprintf("%d", obj.leftText1));
+				obj["HDG_six"].setText(sprintf("%d", obj.rightText2));
+				obj["HDG_two"].setText(sprintf("%d", obj.leftText2));
+				obj["HDG_seven"].setText(sprintf("%d", obj.rightText3));
+				obj["HDG_one"].setText(sprintf("%d", obj.leftText3));
+				
+				obj["HDG_four"].setFontSize(fontSizeHDG(obj.middleText), 1);
+				obj["HDG_five"].setFontSize(fontSizeHDG(obj.rightText1), 1);
+				obj["HDG_three"].setFontSize(fontSizeHDG(obj.leftText1), 1);
+				obj["HDG_six"].setFontSize(fontSizeHDG(obj.rightText2), 1);
+				obj["HDG_two"].setFontSize(fontSizeHDG(obj.leftText2), 1);
+				obj["HDG_seven"].setFontSize(fontSizeHDG(obj.rightText3), 1);
+				obj["HDG_one"].setFontSize(fontSizeHDG(obj.leftText3), 1);
+			}),
+			props.UpdateManager.FromHashValue("ap_vs_pfd", 1, func(val) {
+				if (val < 2) {
+					obj["VS_box"].hide();
+				} else {
+					obj["VS_box"].show();
+				}
+				
+				if (val < 10) {
+					obj["VS_digit"].setText(sprintf("%02d", "0" ~ val));
+				} else {
+					obj["VS_digit"].setText(sprintf("%02d", val));
+				}
+			}),
+			props.UpdateManager.FromHashList(["hdg_diff","showHdg"], nil, func(val) {
+				if (val.showHdg and val.hdg_diff >= -23.62 and val.hdg_diff <= 23.62) {
+					obj["HDG_target"].setTranslation((val.hdg_diff / 10) * 98.5416, 0);
+					obj["HDG_digit_L"].hide();
+					obj["HDG_digit_R"].hide();
+					obj["HDG_target"].show();
+				} else if (val.showHdg and val.hdg_diff < -23.62 and val.hdg_diff >= -180) {
+					obj["HDG_digit_L"].setText(sprintf("%3.0f", val.ap_hdg));
+					obj["HDG_digit_L"].show();
+					obj["HDG_digit_R"].hide();
+					obj["HDG_target"].hide();
+				} else if (val.showHdg and val.hdg_diff > 23.62 and val.hdg_diff <= 180) {
+					obj["HDG_digit_R"].setText(sprintf("%3.0f", val.ap_hdg));
+					obj["HDG_digit_R"].show();
+					obj["HDG_digit_L"].hide();
+					obj["HDG_target"].hide();
+				} else {
+					obj["HDG_digit_L"].hide();
+					obj["HDG_digit_R"].hide();
+					obj["HDG_target"].hide();
+				}
 			}),
 		];
 		
@@ -677,6 +755,7 @@ var canvas_PFD = {
 				update_item.update(notification);
 			}
 		}
+		me["AI_heading"].update();
 	},
 	updateTest: func(notification) {
 		if (me.number == 1) {
@@ -872,8 +951,14 @@ var input = {
 	"fac2": "/systems/fctl/fac2-healthy-signal",
 	"fbwLaw": "/it-fbw/law",
 	"fdPitch": "/it-autoflight/fd/pitch-bar",
+	"hdg_diff": "/instrumentation/pfd/hdg-diff",
+	"hdg_scale": "/instrumentation/pfd/heading-scale",
 	"horizonGround": "/instrumentation/pfd/horizon-ground",
+	"horizonPitch": "/instrumentation/pfd/horizon-pitch",
+	"loc": "/instrumentation/nav[0]/heading-needle-deflection-norm",
+	"gs": "/instrumentation/nav[0]/gs-needle-deflection-norm",
 	"pitchPFD": "/instrumentation/pfd/pitch-deg-non-linear",
+	"showHdg": "/it-autoflight/custom/show-hdg",
 	"slipSkid": "/instrumentation/pfd/slip-skid",
 	"roll": "orientation/roll-deg",
 	"fdRoll": "/it-autoflight/fd/roll-bar",
@@ -887,6 +972,8 @@ var input = {
 	"ap_ils_mode2": "/modes/pfd/ILS2",
 	"ap1": "/it-autoflight/output/ap1",
 	"ap2": "/it-autoflight/output/ap2",
+	"ap_hdg": "/it-autoflight/input/hdg",
+	"ap_vs_pfd": "/it-autoflight/internal/vert-speed-fpm-pfd",
 	"athr": "/it-autoflight/output/athr",
 	"engOut": "/systems/thrust/eng-out",
 	"fd1": "/it-autoflight/output/fd1",
