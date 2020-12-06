@@ -240,7 +240,7 @@ var SystemDisplay = {
 				me.autoCall("eng");
 				me.fctl20sec = 9;
 			} elsif (notification.FWCPhase == 6) {
-				if (notification.gearLever and notification.agl <= 16000) {
+				if (notification.gearLever and notification.gearAglFt <= 16000) {
 					me.autoCall("wheel");
 				} else {
 					me.autoCall("crz");
@@ -377,7 +377,6 @@ emesary.GlobalTransmitter.Register(A320ECAM);
 
 var input = {
 	"aileronFBW": "/fdm/jsbsim/fbw/aileron-sidestick",
-	"agl": "/position/gear-agl-ft",
 	"athr": "/it-autoflight/output/athr",
 	"athrWarn": "/it-autoflight/output/athr-warning",
 	"athrOffTime": "/ECAM/warnings/athr-off-time",

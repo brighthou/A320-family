@@ -41,8 +41,11 @@ var execLoop = func
 input = {
 	frame_rate: "/sim/frame-rate",
 	elapsedTime: "/sim/time/elapsed-sec",
+	gearAglFt: "/position/gear-agl-ft",
 	FWCPhase: "/ECAM/warning-phase",
 	gear0Wow: "/gear/gear[0]/wow",
+	gear1Wow: "/gear/gear[1]/wow",
+	gear2Wow: "/gear/gear[2]/wow",
 	
 	# Just about everything uses these properties at some stage, lets add them here!
 	elecAC1: "/systems/electrical/bus/ac-1",
