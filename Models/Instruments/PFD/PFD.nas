@@ -514,9 +514,9 @@ var canvas_PFD = {
 			props.UpdateManager.FromHashList(["fac1","fac2"], nil, func(val) {
 				# Apparently SPD LIM only on captains PFD
 				if (obj.number == 1 and (val.fac1 == 0 and val.fac2 == 0)) {
-					me["spdLimError"].show();
+					obj["spdLimError"].show();
 				} else {
-					me["spdLimError"].hide();
+					obj["spdLimError"].hide();
 				}
 			}),
 		];
