@@ -3,6 +3,7 @@
 # Copyright (c) 2020 Josh Davidson (Octal450)
 
 var acconfig_mismatch = props.globals.getNode("/systems/acconfig/mismatch-code", 1);
+var gear_agl_cur = nil;
 
 # Fetch nodes:
 var wow0 = props.globals.getNode("/gear/gear[0]/wow");
@@ -15,8 +16,6 @@ var target_altitude = props.globals.getNode("/autopilot/settings/target-altitude
 var altitude = props.globals.getNode("/instrumentation/altimeter/indicated-altitude-ft", 1);
 var altitude_pfd = props.globals.getNode("/instrumentation/altimeter/indicated-altitude-ft-pfd", 1);
 var ap_alt = props.globals.getNode("/it-autoflight/internal/alt", 1);
-var vs_needle = props.globals.getNode("/instrumentation/pfd/vs-needle", 1);
-var vs_digit = props.globals.getNode("/instrumentation/pfd/vs-digit-trans", 1);
 var ind_spd_kt = props.globals.getNode("/instrumentation/airspeed-indicator/indicated-speed-kt", 1);
 var ind_spd_mach = props.globals.getNode("/instrumentation/airspeed-indicator/indicated-mach", 1);
 var at_mach_mode = props.globals.getNode("/it-autoflight/input/kts-mach", 1);
@@ -287,6 +286,23 @@ var canvas_PFD = {
 					obj["HDG_digit_L"].hide();
 					obj["HDG_digit_R"].hide();
 					obj["HDG_target"].hide();
+				}
+			}),
+			props.UpdateManager.FromHashValue("vsNeedle", nil, func(val) {
+				obj["VS_pointer"].setRotation(val * D2R);
+			}),
+			props.UpdateManager.FromHashValue("vsDigit", nil, func(val) {
+				obj["VS_box"].setTranslation(0, val);
+			}),
+			props.UpdateManager.FromHashList(["vertSpeed","gearAglFt"], 10, func(val) {
+				if (abs(val.vertSpeed) >= 6000 or (val.vertSpeed <= -2000 and val.gearAglFt <= 2500) or (val.vertSpeed <= -1200 and val.gearAglFt <= 1000)) {
+					obj["VS_digit"].setColor(0.7333,0.3803,0);
+					obj["VS_pointer"].setColor(0.7333,0.3803,0);
+					obj["VS_pointer"].setColorFill(0.7333,0.3803,0);
+				} else {
+					obj["VS_digit"].setColor(0.0509,0.7529,0.2941);
+					obj["VS_pointer"].setColor(0.0509,0.7529,0.2941);
+					obj["VS_pointer"].setColorFill(0.0509,0.7529,0.2941);
 				}
 			}),
 		];
@@ -755,6 +771,107 @@ var canvas_PFD = {
 				update_item.update(notification);
 			}
 		}
+		gear_agl_cur = pts.Position.gearAglFt.getValue();
+		if (fmgc.FMGCInternal.phase < 3 or fmgc.flightPlanController.arrivalDist >= 250) {
+			me["FMA_dh_box"].hide();
+			me["FMA_dh"].hide();
+			me["FMA_dhn"].hide();
+			me["FMA_nodh"].hide();
+			#me["dhReached"].hide();
+			if (gear_agl_cur <= 2500) {
+				me["AI_agl"].show();
+				if (gear_agl_cur <= decision.getValue()) {
+					me["AI_agl"].setColor(0.7333,0.3803,0);
+				} else {
+					me["AI_agl"].setColor(0.0509,0.7529,0.2941);
+				}
+			} else {
+				me["AI_agl"].hide();
+			}
+		} else {
+			if (gear_agl_cur <= 2500) {
+				me["AI_agl"].show();
+				me["FMA_dh_box"].hide(); #not implemented
+				if (int(getprop("/FMGC/internal/radio")) != 99999) {
+					me["FMA_dh"].setText("RADIO");
+					me["FMA_dh"].show();
+					me["FMA_dhn"].setText(sprintf("%.0f", getprop("/FMGC/internal/radio")));
+					me["FMA_dhn"].show();
+					me["FMA_nodh"].hide();
+					hundredAbove.setValue(getprop("/FMGC/internal/radio") + 100);
+					minimum.setValue(getprop("/FMGC/internal/radio"));
+					if (gear_agl_cur <= getprop("/FMGC/internal/radio") + 100) {
+						me["AI_agl"].setColor(0.7333,0.3803,0);
+					} else {
+						me["AI_agl"].setColor(0.0509,0.7529,0.2941);
+					}
+				} else if (int(getprop("/FMGC/internal/baro")) != 99999) {
+					me["FMA_dh"].setText("BARO");
+					me["FMA_dh"].show();
+					me["FMA_dhn"].setText(sprintf("%.0f", getprop("/FMGC/internal/baro")));
+					me["FMA_dhn"].show();
+					me["FMA_nodh"].hide();
+					hundredAbove.setValue(getprop("/FMGC/internal/baro") + 100);
+					minimum.setValue(getprop("/FMGC/internal/baro"));
+					if (gear_agl_cur <= getprop("/FMGC/internal/baro") + 100) {
+						me["AI_agl"].setColor(0.7333,0.3803,0);
+					} else {
+						me["AI_agl"].setColor(0.0509,0.7529,0.2941);
+					}
+				} else if (fmgc.FMGCInternal.radioNo) {
+					me["FMA_dh"].setText("BARO");
+					me["FMA_dh"].show();
+					me["FMA_dhn"].setText("100");
+					me["FMA_dhn"].show();
+					me["FMA_nodh"].hide();
+					hundredAbove.setValue(100);
+					minimum.setValue(0);
+					if (gear_agl_cur <= 100) {
+						me["AI_agl"].setColor(0.7333,0.3803,0);
+					} else {
+						me["AI_agl"].setColor(0.0509,0.7529,0.2941);
+					}
+				} else {
+					me["FMA_dh"].hide();
+					me["FMA_dhn"].hide();
+					me["FMA_nodh"].show();
+					hundredAbove.setValue(400);
+					minimum.setValue(300);
+					if (gear_agl_cur <= 400) {
+						me["AI_agl"].setColor(0.7333,0.3803,0);
+					} else {
+						me["AI_agl"].setColor(0.0509,0.7529,0.2941);
+					}
+				}
+			} else {
+				me["AI_agl"].hide();
+				me["FMA_nodh"].hide();
+				me["FMA_dh_box"].hide(); #not implemented
+				if (int(getprop("/FMGC/internal/radio")) != 99999) {
+					me["FMA_dh"].setText("RADIO");
+					me["FMA_dh"].show();
+					me["FMA_dhn"].setText(sprintf("%.0f", getprop("/FMGC/internal/radio")));
+					me["FMA_dhn"].show();
+					me["FMA_nodh"].hide();
+				} else if (int(getprop("/FMGC/internal/baro")) != 99999) {
+					me["FMA_dh"].setText("BARO");
+					me["FMA_dh"].show();
+					me["FMA_dhn"].setText(sprintf("%.0f", getprop("/FMGC/internal/baro")));
+					me["FMA_dhn"].show();
+					me["FMA_nodh"].hide();
+				} else if (fmgc.FMGCInternal.radioNo) {
+					me["FMA_dh"].setText("BARO");
+					me["FMA_dh"].show();
+					me["FMA_dhn"].setText("100");
+					me["FMA_dhn"].show();
+					me["FMA_nodh"].hide();
+				} else {
+					me["FMA_dh"].hide();
+					me["FMA_dhn"].hide();
+					me["FMA_nodh"].show();
+				}
+			}
+		}
 		me["AI_heading"].update();
 	},
 	updateTest: func(notification) {
@@ -965,6 +1082,8 @@ var input = {
 	"outerMarker": "/instrumentation/marker-beacon/outer",
 	"middleMarker": "/instrumentation/marker-beacon/middle",
 	"innerMarker": "/instrumentation/marker-beacon/inner",
+	"vsNeedle": "/instrumentation/pfd/vs-needle",
+	"vsDigit": "/instrumentation/pfd/vs-digit-trans",
 	
 	# Autopilot
 	"alphaFloor": "/systems/thrust/alpha-floor",
@@ -985,6 +1104,7 @@ var input = {
 	"thr2": "/controls/engines/engine[1]/throttle-pos",
 	"lvrClb": "/systems/thrust/lvrclb",
 	"togaLk": "/systems/thrust/toga-lk",
+	"vertSpeed": "/it-autoflight/internal/vert-speed-fpm",
 	
 	# FMA
 	"ap_box": "/modes/pfd/fma/ap-mode-box",
