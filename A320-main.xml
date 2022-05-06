@@ -43,8 +43,9 @@
 				<nick>CaptB</nick>
 			</author>
 			<author>
-				<name>vezza</name>
+				<name>Andrea Vezzali</name>
 				<description>Systems, Displays</description>
+				<nick>vezza</nick>
 			</author>
 		</authors>
 		
@@ -54,7 +55,9 @@
 		<long-description>The Airbus A320 is a family of narrow body airliners built by Airbus Industrie. First flown in 1987,
 		the aircraft is the most produced airliner ever, with over 9,500 built to date. It was one of the first airliners
 		to use digital flight controls and fly by wire, and a fully glass cockpit.</long-description>
-  
+		
+		<expected-aircraft-dir-name>A320-family</expected-aircraft-dir-name>
+		
 		<hud n="0">
 			<enable3d n="0">false</enable3d>
 			<enable3d n="1">false</enable3d>
@@ -456,6 +459,16 @@
 							]]></script>
 						</binding>
 					</item>
+					<item>
+						<label>Remote MCDU</label>
+						<binding>
+							<command>nasal</command>
+							<script>
+							var mcduweb_dlg = gui.Dialog.new("sim/gui/dialogs/mcduweb/dialog", "Aircraft/A320-family/gui/dialogs/mcduweb.xml");
+							mcduweb_dlg.open();
+							</script>
+						</binding>
+					</item>					
 				</menu>
 				<menu n="105">
 					<label>Utilities</label>
@@ -563,7 +576,7 @@
 			<z-offset-max-m type="float">300.0</z-offset-max-m>
 		</current-view>
 		
-		<minimum-fg-version>2019.2.0</minimum-fg-version>
+		<minimum-fg-version>2020.3.12</minimum-fg-version>
 
 		<navdb>
 			<min-runway-length-ft>3000</min-runway-length-ft>
@@ -801,6 +814,10 @@
 			<brake-left type="double">0</brake-left>
 			<brake-right type="double">0</brake-right>
 		</autobrake>
+		<cabin>
+			<footwarmer-cpt type="bool">0</footwarmer-cpt>
+			<footwarmer-fo type="bool">0</footwarmer-fo>
+		</cabin>
 		<CVR>
 			<erase type="bool">0</erase>
 			<gndctl type="bool">0</gndctl>
@@ -808,6 +825,9 @@
 			<test type="bool">0</test>
 			<tone type="bool">0</tone>
 		</CVR>
+		<doors>
+			<doorc-switch type="int">0</doorc-switch>
+		</doors>
 		<electric>
 			<avionics-switch type="bool">true</avionics-switch>
 		</electric>
@@ -975,6 +995,8 @@
 			<dome-norm type="double">0</dome-norm>
 			<fcu-panel-knb type="double">0</fcu-panel-knb>
 			<fcu-panel-norm type="double">0</fcu-panel-norm>
+			<fcu-digit-knb type="double">1</fcu-digit-knb>
+			<fcu-digit-norm type="double">1</fcu-digit-norm>
 			<landing-lights n="0" type="double">0</landing-lights>
 			<landing-lights n="1" type="double">0</landing-lights>
 			<landing-lights n="2" type="double">0</landing-lights>
@@ -1045,13 +1067,26 @@
 				<ratman type="bool">0</ratman>
 			</protectors>
 		</OH>
+		<oxygen>
+			<cockpit-oxygen-supply-pb type="bool">0</cockpit-oxygen-supply-pb>
+			<cockpit-mask-1-on type="bool">0</cockpit-mask-1-on>
+			<cockpit-mask-2-on type="bool">0</cockpit-mask-2-on>
+			<cockpit-mask-3-on type="bool">0</cockpit-mask-3-on>
+			<cockpit-mask-4-on type="bool">0</cockpit-mask-4-on>
+			<cockpit-mask-1-selector type="bool">0</cockpit-mask-1-selector>
+			<cockpit-mask-2-selector type="bool">0</cockpit-mask-2-selector>
+			<cockpit-mask-3-selector type="bool">0</cockpit-mask-3-selector>
+			<cockpit-mask-4-selector type="bool">0</cockpit-mask-4-selector>
+			<passenger-mask-deploy-man type="bool">0</passenger-mask-deploy-man>
+			<passenger-mask-reset type="bool">0</passenger-mask-reset>
+		</oxygen>
 		<pneumatics n="0">
 			<switches n="0">
 				<apu type="bool">0</apu>
 				<bleed-1 type="bool">1</bleed-1>
 				<bleed-2 type="bool">1</bleed-2>
 				<blower type="bool">0</blower>
-				<cabin-fans type="bool">0</cabin-fans>
+				<cabin-fans type="bool">1</cabin-fans>
 				<extract type="bool">0</extract>
 				<groundair type="bool">0</groundair>
 				<hot-air type="bool">1</hot-air>
@@ -1066,23 +1101,25 @@
 			</switches>
 		</pneumatics>
 		<switches>
-			<!-- Smoking is bad :P -->
-			<no-smoking-sign type="double">0.5</no-smoking-sign>
-			<seatbelt-sign type="double">0.0</seatbelt-sign>
 			<annun-test type="int">0</annun-test>
-			<qnh-knb>100000</qnh-knb>
-			<strobe type="double">0.0</strobe>
 			<beacon type="bool">0</beacon>
-			<wing-lights type="bool">0</wing-lights>
+			<cabinCall type="bool">0</cabinCall>
+			<emerCall type="bool">0</emerCall>
+			<emerCallLtO type="bool">0</emerCallLtO>
+			<emerCallLtC type="bool">0</emerCallLtC>
 			<landing-lights-l type="float">0.0</landing-lights-l>
 			<landing-lights-r type="float">0.0</landing-lights-r>
 			<LrainRpt type="bool">0</LrainRpt>
-			<RrainRpt type="bool">0</RrainRpt>
-			<emerCallLtO type="bool">0</emerCallLtO>
-			<emerCallLtC type="bool">0</emerCallLtC>
-			<cabinCall type="bool">0</cabinCall>
-			<emerCall type="bool">0</emerCall>
 			<mechCall type="bool">0</mechCall>
+			<no-smoking-sign type="double">0.5</no-smoking-sign>
+			<qnh-knb>100000</qnh-knb>
+			<RrainRpt type="bool">0</RrainRpt>
+			<rudder-trim type="int">0</rudder-trim>
+			<seatbelt-sign type="double">0.0</seatbelt-sign>
+			<strobe type="double">0.0</strobe>
+			<wing-lights type="bool">0</wing-lights>
+			<wiperLspd type="int">0</wiperLspd>
+			<wiperRspd type="int">0</wiperRspd>
 		</switches>
 		<tray n="0">
 			<lefttrayext type="double">0</lefttrayext>
@@ -1272,8 +1309,6 @@
 				<ac-ess-bus type="bool">0</ac-ess-bus>
 				<ac-1-bus type="bool">0</ac-1-bus>
 				<ac-2-bus type="bool">0</ac-2-bus>
-				<bat-1 type="bool">0</bat-1>
-				<bat-2 type="bool">0</bat-2>
 				<dc-bat-bus type="bool">0</dc-bat-bus>
 				<dc-ess-bus type="bool">0</dc-ess-bus>
 				<dc-1-bus type="bool">0</dc-1-bus>
@@ -1312,15 +1347,22 @@
 			</fuel>
 			<gear type="bool">0</gear>
 			<hydraulic>
-				<blue-edp type="bool">0</blue-edp>
 				<blue-elec type="bool">0</blue-elec>
+				<blue-elec-ovht type="bool">0</blue-elec-ovht>
 				<blue-leak type="bool">0</blue-leak>
+				<blue-reservoir-air-press-lo type="bool">0</blue-reservoir-air-press-lo> <!-- true at 22 psi relative, false at 25 psi relative -->
+				<blue-reservoir-ovht type="bool">0</blue-reservoir-ovht> <!-- 95 deg, cancel at 88.4 deg -->
 				<green-edp type="bool">0</green-edp>
 				<green-leak type="bool">0</green-leak>
+				<green-reservoir-air-press-lo type="bool">0</green-reservoir-air-press-lo>
+				<green-reservoir-ovht type="bool">0</green-reservoir-ovht>
 				<ptu type="bool">0</ptu>
 				<yellow-edp type="bool">0</yellow-edp>
 				<yellow-elec type="bool">0</yellow-elec>
+				<yellow-elec-ovht type="bool">0</yellow-elec-ovht> <!-- 162 deg -->
 				<yellow-leak type="bool">0</yellow-leak>
+				<yellow-reservoir-air-press-lo type="bool">0</yellow-reservoir-air-press-lo>
+				<yellow-reservoir-ovht type="bool">0</yellow-reservoir-ovht>
 			</hydraulic>
 			<icing>
 				<wing-left-valve type="bool">0</wing-left-valve>
@@ -1567,11 +1609,13 @@
 				<operating-3 type="bool">0</operating-3>
 			</adr>
 		</navigation>
+		
 	</systems>
 	
 	<options n="0">
 		<system n="0">
 			<keyboard-mode type="bool">0</keyboard-mode>
+			<fgcamera-keys-enabled type="bool">0</fgcamera-keys-enabled>
 		</system>
 		<steep-ils type="bool">0</steep-ils>
 		<steep-ils-avail type="bool">0</steep-ils-avail>
@@ -1617,6 +1661,14 @@
 			<serviceable type="bool">true</serviceable>
 		</altimeter>
 		
+		<altimeter n="6">
+			<indicated-altitude-ft type="double">0</indicated-altitude-ft>
+			<indicated-altitude-ft-pfd type="double">0</indicated-altitude-ft-pfd>
+			<oldqnh type="double">29.92</oldqnh>
+			<serviceable type="bool">true</serviceable>
+			<std type="bool">0</std>
+		</altimeter>
+		
 		<chrono n="0">
 			<started type="bool">0</started>
 			<paused type="bool">0</paused>
@@ -1653,7 +1705,7 @@
 		
 		<comm n="2">
 			<frequencies>
-				<selected-mhz type="double">0</selected-mhz>
+				<selected-mhz type="double">121.5</selected-mhz>
 				<standby-mhz type="double">123.2</standby-mhz>
 			</frequencies>
 			<serviceable type="bool">true</serviceable>
@@ -1706,7 +1758,11 @@
 		</groundradar>
 		
 		<iesi>
+			<att-reset type="double">false</att-reset>
 			<att-reset-cmd type="bool">false</att-reset-cmd>
+			<display>
+				<show-mach type="bool">false</show-mach>
+			</display>
 		</iesi>
 		
 		<marker-beacon n="0">
@@ -1829,6 +1885,11 @@
 		<pfd n="0">
 			<hundred-above type="int">99999</hundred-above>
 			<minimums type="int">99999</minimums>
+			<heading-deg type="double">0</heading-deg>
+			<heading-scale type="double">0</heading-scale>
+			<horizon-ground type="double">0</horizon-ground>
+			<horizon-pitch type="double">0</horizon-pitch>
+			<track-deg type="double">0</track-deg>
 		</pfd>
 		
 		<radar-altimeter n="0">
@@ -1867,8 +1928,9 @@
 	</instrumentation>
 	
 	<modes>
-		<cpt-du-xfr>0</cpt-du-xfr>
-		<fo-du-xfr>0</fo-du-xfr>
+		<cpt-du-xfr type="bool">0</cpt-du-xfr>
+		<ecam-du-xfr type="bool">0</ecam-du-xfr>
+		<fo-du-xfr type="bool">0</fo-du-xfr>
 		<pfd>
 			<ILS1>0</ILS1>
 			<ILS2>0</ILS2>
@@ -2196,9 +2258,18 @@
 				</binding>
 				<binding>
 					<condition>
+				    	<property>/options/system/fgcamera-keys-enabled</property>
+					</condition>
+					<command>fgcamera-select</command>
+					<camera-id>1</camera-id>
+					<camera-type>aircraft</camera-type>
+				</binding>
+				<binding>
+					<condition>
 						<not><property>/FMGC/keyboard-left</property></not>
 						<not><property>/FMGC/keyboard-right</property></not>
 						<not><property>/options/system/keyboard-mode</property></not>
+						<not><property>/options/system/fgcamera-keys-enabled</property></not>
 					</condition>
 					<command>property-assign</command>
 					<property>/sim/current-view/view-number</property>
@@ -2234,9 +2305,18 @@
 				</binding>
 				<binding>
 					<condition>
+     					<property>/options/system/fgcamera-keys-enabled</property>
+					</condition>
+					<command>fgcamera-select</command>
+					<camera-id>2</camera-id>
+					<camera-type>aircraft</camera-type>
+				</binding>
+				<binding>
+					<condition>
 						<not><property>/FMGC/keyboard-left</property></not>
 						<not><property>/FMGC/keyboard-right</property></not>
 						<not><property>/options/system/keyboard-mode</property></not>
+						<not><property>/options/system/fgcamera-keys-enabled</property></not>
 					</condition>
 					<command>property-assign</command>
 					<property>/sim/current-view/view-number</property>
@@ -2273,9 +2353,18 @@
 				</binding>
 				<binding>
 					<condition>
+				    	<property>/options/system/fgcamera-keys-enabled</property>
+					</condition>
+					<command>fgcamera-select</command>
+					<camera-id>3</camera-id>
+					<camera-type>aircraft</camera-type>
+				</binding>
+				<binding>
+					<condition>
 						<not><property>/FMGC/keyboard-left</property></not>
 						<not><property>/FMGC/keyboard-right</property></not>
 						<not><property>/options/system/keyboard-mode</property></not>
+						<not><property>/options/system/fgcamera-keys-enabled</property></not>
 					</condition>
 					<command>property-assign</command>
 					<property>/sim/current-view/view-number</property>
@@ -2312,9 +2401,18 @@
 				</binding>
 				<binding>
 					<condition>
+				    	<property>/options/system/fgcamera-keys-enabled</property>
+					</condition>
+					<command>fgcamera-select</command>
+					<camera-id>4</camera-id>
+					<camera-type>aircraft</camera-type>
+				</binding>
+				<binding>
+					<condition>
 						<not><property>/FMGC/keyboard-left</property></not>
 						<not><property>/FMGC/keyboard-right</property></not>
 						<not><property>/options/system/keyboard-mode</property></not>
+						<not><property>/options/system/fgcamera-keys-enabled</property></not>
 					</condition>
 					<command>property-assign</command>
 					<property>/sim/current-view/view-number</property>
@@ -2351,9 +2449,18 @@
 				</binding>
 				<binding>
 					<condition>
+				    	<property>/options/system/fgcamera-keys-enabled</property>
+					</condition>
+					<command>fgcamera-select</command>
+					<camera-id>5</camera-id>
+					<camera-type>aircraft</camera-type>
+				</binding>
+				<binding>
+					<condition>
 						<not><property>/FMGC/keyboard-left</property></not>
 						<not><property>/FMGC/keyboard-right</property></not>
 						<not><property>/options/system/keyboard-mode</property></not>
+						<not><property>/options/system/fgcamera-keys-enabled</property></not>
 					</condition>
 					<command>property-assign</command>
 					<property>/sim/current-view/view-number</property>
@@ -2392,9 +2499,18 @@
 				</binding>
 				<binding>
 					<condition>
+				    	<property>/options/system/fgcamera-keys-enabled</property>
+					</condition>
+					<command>fgcamera-select</command>
+					<camera-id>6</camera-id>
+					<camera-type>aircraft</camera-type>
+				</binding>
+				<binding>
+					<condition>
 						<not><property>/FMGC/keyboard-left</property></not>
 						<not><property>/FMGC/keyboard-right</property></not>
 						<not><property>/options/system/keyboard-mode</property></not>
+						<not><property>/options/system/fgcamera-keys-enabled</property></not>
 					</condition>
 					<command>property-assign</command>
 					<property>/sim/current-view/view-number</property>
@@ -2441,6 +2557,14 @@
 				</binding-->
 				<binding>
 					<condition>
+				    	<property>/options/system/fgcamera-keys-enabled</property>
+					</condition>
+					<command>fgcamera-select</command>
+					<camera-id>7</camera-id>
+					<camera-type>aircraft</camera-type>
+				</binding>
+				<binding>
+					<condition>
 						<not><property>/FMGC/keyboard-left</property></not>
 						<not><property>/FMGC/keyboard-right</property></not>
 						<property>/options/system/keyboard-mode</property>
@@ -2467,6 +2591,14 @@
 					<command>nasal</command>
 					<script>mcdu.button("8", 1);</script>
 				</binding>
+				<binding>
+					<condition>
+				    	<property>/options/system/fgcamera-keys-enabled</property>
+					</condition>
+					<command>fgcamera-select</command>
+					<camera-id>8</camera-id>
+					<camera-type>aircraft</camera-type>
+				</binding>
 				<!--binding>
 					<condition>
 						<not><property>/FMGC/keyboard-left</property></not>
@@ -2481,7 +2613,7 @@
 					<condition>
 						<not><property>/FMGC/keyboard-left</property></not>
 						<not><property>/FMGC/keyboard-right</property></not>
-						<property>/options/system/keyboard-mode</property>
+						<property>/options/system/keyboard-mode</property>						
 					</condition>
 					<command>nasal</command>
 					<script>
@@ -2505,6 +2637,14 @@
 					</condition>
 					<command>nasal</command>
 					<script>mcdu.button("9", 1);</script>
+				</binding>
+				<binding>
+					<condition>
+				    	<property>/options/system/fgcamera-keys-enabled</property>
+					</condition>
+					<command>fgcamera-select</command>
+					<camera-id>9</camera-id>
+					<camera-type>aircraft</camera-type>
 				</binding>
 				<!--binding>
 					<condition>
@@ -4645,6 +4785,8 @@
 			<file>Aircraft/A320-family/Nasal/Systems/tyresmoke.nas</file>
 		</systems>
 		<ecam>
+			<file>Aircraft/A320-family/Nasal/ECAM/SystemDisplay.nas</file>
+			<file>Aircraft/A320-family/Nasal/ECAM/ECAM-nodes.nas</file>
 			<file>Aircraft/A320-family/Nasal/ECAM/ECAM-main.nas</file>
 			<file>Aircraft/A320-family/Nasal/ECAM/ECAM-controller.nas</file>
 			<file>Aircraft/A320-family/Nasal/ECAM/ECAM-logic.nas</file>
@@ -4703,8 +4845,6 @@
 			<file>Aircraft/A320-family/Nasal/MCDU/PERFTO.nas</file>
 			<file>Aircraft/A320-family/Nasal/MCDU/RADNAV.nas</file>
 			<file>Aircraft/A320-family/Nasal/MCDU/DATA.nas</file>
-			<file>Aircraft/A320-family/Nasal/MCDU/DATA2.nas</file>
-			<file>Aircraft/A320-family/Nasal/MCDU/STATUS.nas</file>
 		</mcdu>
 		<!-- Traffic layer from E-jet -->
 		<traffic>
@@ -4721,12 +4861,27 @@
 		<canvas_ecam>
 			<file>Aircraft/A320-family/Nasal/emesary/exec.nas</file>
 			<file>Aircraft/A320-family/Models/Instruments/Upper-ECAM/Upper-ECAM.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-base.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-APU.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-bleed.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-cond.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-cruise.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-door.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-elec.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-eng.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-fctl.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-fuel.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-hyd.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-press.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-sts.nas</file>
+			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM-wheel.nas</file>
 			<file>Aircraft/A320-family/Models/Instruments/Lower-ECAM/Lower-ECAM.nas</file>
 		</canvas_ecam>
 		<canvas_iesi>
 			<file>Aircraft/A320-family/Models/Instruments/IESI/IESI.nas</file>
 		</canvas_iesi>
 		<canvas_mcdu>
+			<file>Aircraft/A320-family/Models/Instruments/MCDU/MCDU-funcs.nas</file>
 			<file>Aircraft/A320-family/Models/Instruments/MCDU/MCDU.nas</file>
 		</canvas_mcdu>
 		<canvas_qrh>

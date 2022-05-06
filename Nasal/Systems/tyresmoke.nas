@@ -7,29 +7,29 @@ var tyresmoke_1 = aircraft.tyresmoke.new(1, 0, 0.8, 0);
 var tyresmoke_2 = aircraft.tyresmoke.new(2, 0, 0.8, 0);
 
 # =============================== listeners ===============================
-setlistener("gear/gear[0]/position-norm", func {
+setlistener("/gear/gear[0]/position-norm", func {
 	if (pts.Gear.position[0].getValue()){
 		run_tyresmoke0 = 1;
-	}else{
+	} else {
 		run_tyresmoke0 = 0;
 	}
-},1,0);
+}, 1, 0);
 
-setlistener("gear/gear[1]/position-norm", func {
+setlistener("/gear/gear[1]/position-norm", func {
 	if (pts.Gear.position[1].getValue()){
 		run_tyresmoke1 = 1;
-	}else{
+	} else {
 		run_tyresmoke1 = 0;
 	}
-},1,0);
+}, 1, 0);
 
-setlistener("gear/gear[2]/position-norm", func {
+setlistener("/gear/gear[2]/position-norm", func {
 	if (pts.Gear.position[2].getValue()){
 		run_tyresmoke2 = 1;
-	}else{
+	} else {
 		run_tyresmoke2 = 0;
 	}
-},1,0);
+}, 1, 0);
 
 #============================ Rain ===================================
 aircraft.rain.init();
@@ -44,7 +44,7 @@ var tyresmoke_and_rain = func {
 		tyresmoke_2.update();
 	aircraft.rain.update();
 	settimer(tyresmoke_and_rain, 0);
-}# end tyresmoke_and_rain
+}
 
 # == fire it up ===
 tyresmoke_and_rain();

@@ -2,12 +2,12 @@
 # Jonathan Redpath
 
 # Copyright (c) 2019 Jonathan Redpath
-var lcont = 0;
-var rcont = 0;
 
 var HYD = {
+	lcont: 0,
+	rcont: 0,
 	Brakes: {
-		accumPressPsi: props.globals.initNode("/systems/hydraulic/yellow-accumulator-psi-cmd", 0, "INT"),
+		accumPressPsi: props.globals.initNode("/systems/hydraulic/yellow-accumulator-psi-cmd", 3000, "INT"),
 		leftPressPsi: props.globals.initNode("/systems/hydraulic/brakes/pressure-left-psi", 0, "INT"),
 		rightPressPsi: props.globals.initNode("/systems/hydraulic/brakes/pressure-right-psi", 0, "INT"),
 		mode: props.globals.initNode("/systems/hydraulic/brakes/mode", 0, "INT"),
@@ -17,13 +17,21 @@ var HYD = {
 	},
 	Fail: {
 		blueElec: props.globals.getNode("/systems/failures/hydraulic/blue-elec"),
+		blueElecOvht: props.globals.getNode("/systems/failures/hydraulic/blue-elec-ovht"),
 		blueLeak: props.globals.getNode("/systems/failures/hydraulic/blue-leak"),
+		blueReservoirAirPressLow: props.globals.getNode("/systems/failures/hydraulic/blue-reservoir-air-press-lo"),
+		blueReservoirOvht: props.globals.getNode("/systems/failures/hydraulic/blue-reservoir-ovht"),
 		greenEng: props.globals.getNode("/systems/failures/hydraulic/green-edp"),
 		greenLeak: props.globals.getNode("/systems/failures/hydraulic/green-leak"),
+		greenReservoirAirPressLow: props.globals.getNode("/systems/failures/hydraulic/green-reservoir-air-press-lo"),
+		greenReservoirOvht: props.globals.getNode("/systems/failures/hydraulic/green-reservoir-ovht"),
 		ptuFault: props.globals.getNode("/systems/failures/hydraulic/ptu"),
 		yellowEng: props.globals.getNode("/systems/failures/hydraulic/yellow-edp"),
 		yellowElec: props.globals.getNode("/systems/failures/hydraulic/yellow-elec"),
+		yellowElecOvht: props.globals.getNode("/systems/failures/hydraulic/yellow-elec-ovht"),
 		yellowLeak: props.globals.getNode("/systems/failures/hydraulic/yellow-leak"),
+		yellowReservoirAirPressLow: props.globals.getNode("/systems/failures/hydraulic/yellow-reservoir-air-press-lo"),
+		yellowReservoirOvht: props.globals.getNode("/systems/failures/hydraulic/yellow-reservoir-ovht"),
 	},
 	Psi: {
 		blue: props.globals.getNode("/systems/hydraulic/blue-psi"),
@@ -36,6 +44,7 @@ var HYD = {
 	},
 	Pump: {
 		yellowElec: props.globals.getNode("/systems/hydraulic/sources/yellow-elec/pump-operate"),
+		yellowElecFail: props.globals.getNode("/ECAM/warnings/hyd/yellow-elec-pump-fail"),
 	},
 	Qty: {
 		blueInput: props.globals.initNode("/systems/hydraulic/blue-qty-input", 0, "INT"),
@@ -62,11 +71,22 @@ var HYD = {
 		yellowFire: props.globals.getNode("/systems/hydraulic/sources/yellow-edp/fire-valve"),
 		greenFire: props.globals.getNode("/systems/hydraulic/sources/green-edp/fire-valve"),
 	},
+	Warnings: {
+		blueAbnormLoPr: props.globals.getNode("/ECAM/warnings/hyd/blue-abnorm-lo-pr"),
+		greenAbnormLoPr: props.globals.getNode("/ECAM/warnings/hyd/green-abnorm-lo-pr"),
+		yellowAbnormLoPr: props.globals.getNode("/ECAM/warnings/hyd/yellow-abnorm-lo-pr"),
+		blueLoLvl: props.globals.getNode("/systems/hydraulic/relays/blue-reservoir-low-qty-switch"),
+		greenLoLvl: props.globals.getNode("/systems/hydraulic/relays/green-reservoir-low-qty-switch"),
+		yellowLoLvl: props.globals.getNode("/systems/hydraulic/relays/yellow-reservoir-low-qty-switch"),
+		blueReservoirOvht: props.globals.getNode("/systems/hydraulic/relays/blue-reservoir-overheat"),
+		greenReservoirOvht: props.globals.getNode("/systems/hydraulic/relays/green-reservoir-overheat"),
+		yellowReservoirOvht: props.globals.getNode("/systems/hydraulic/relays/yellow-reservoir-overheat"),
+	},
 	init: func() {
 		me.resetFail();
-		me.Qty.blueInput.setValue(math.round((rand() * 4) + 8 , 0.1)); # Random between 8 and 12
-		me.Qty.greenInput.setValue(math.round((rand() * 4) + 8 , 0.1)); # Random between 8 and 12
-		me.Qty.yellowInput.setValue(math.round((rand() * 4) + 8 , 0.1)); # Random between 8 and 12
+		me.Qty.blueInput.setValue(8);
+		me.Qty.greenInput.setValue(16);
+		me.Qty.yellowInput.setValue(15);
 		me.Switch.blueElec.setValue(1);
 		me.Switch.blueElecOvrd.setValue(0);
 		me.Switch.greenEDP.setValue(1);
@@ -74,41 +94,51 @@ var HYD = {
 		me.Switch.rat.setValue(0);
 		me.Switch.yellowEDP.setValue(1);
 		me.Switch.yellowElec.setValue(0);
+		me.Brakes.accumPressPsi.setValue(3000);
 	},
 	resetFail: func() {
 		me.Fail.blueElec.setBoolValue(0);
+		me.Fail.blueElecOvht.setBoolValue(0);
 		me.Fail.blueLeak.setBoolValue(0);
+		me.Fail.blueReservoirAirPressLow.setBoolValue(0);
+		me.Fail.blueReservoirOvht.setBoolValue(0);
 		me.Fail.greenEng.setBoolValue(0);
 		me.Fail.greenLeak.setBoolValue(0);
+		me.Fail.greenReservoirAirPressLow.setBoolValue(0);
+		me.Fail.greenReservoirOvht.setBoolValue(0);
 		me.Fail.ptuFault.setBoolValue(0);
 		me.Fail.yellowEng.setBoolValue(0);
 		me.Fail.yellowElec.setBoolValue(0);
+		me.Fail.yellowElecOvht.setBoolValue(0);
 		me.Fail.yellowLeak.setBoolValue(0);
+		me.Fail.yellowReservoirAirPressLow.setBoolValue(0);
+		me.Fail.yellowReservoirOvht.setBoolValue(0);
 	},
 	loop: func(notification) {
-		# Decrease accumPressPsi when green and yellow hydraulic's aren't pressurized
+		# Decrease accumPressPsi when green and yellow hydraulics aren't pressurized
 		if (me.Brakes.leftbrake.getValue() > 0 or notification.brakesMode == 0) {
-			lcont = lcont + 1;
+			me.lcont = me.lcont + 1;
 		} else {
-			lcont = 0;
+			me.lcont = 0;
 		}
 		if (me.Brakes.rightbrake.getValue() > 0 or notification.brakesMode == 0) {
-			rcont = rcont + 1;
+			me.rcont = me.rcont + 1;
 		} else {
-			rcont = 0;
+			me.rcont = 0;
 		}
+		
 		if (notification.yellow < notification.accumPressPsi and notification.accumPressPsi > 0) {
-			if  (lcont == 1) {
-					me.Brakes.accumPressPsi.setValue(notification.accumPressPsi - 200);
+			if (me.lcont == 1) {
+				me.Brakes.accumPressPsi.setValue(notification.accumPressPsi - 200);
 			}
-			if  (rcont == 1) {
-					me.Brakes.accumPressPsi.setValue(notification.accumPressPsi - 200);
+			if (me.rcont == 1) {
+				me.Brakes.accumPressPsi.setValue(notification.accumPressPsi - 200);
 			}
 			if (notification.accumPressPsi < 0) {
 				me.Brakes.accumPressPsi.setValue(0);
 			}
 		}
-
+		
 		# Braking Pressure
 		if (notification.brakesMode == 1 or (notification.brakesMode == 2 and notification.green >= 2500)) {
 			# Normal braking - Green OK
@@ -181,6 +211,7 @@ var HYD = {
 	},
 };
 
+# Restrict gear raising on the ground
 setlistener("/controls/gear/gear-down", func {
 	if (!pts.Controls.Gear.gearDown.getValue() and (pts.Gear.wow[0].getValue() or pts.Gear.wow[1].getValue() or pts.Gear.wow[2].getValue())) {
 		pts.Controls.Gear.gearDown.setValue(1);

@@ -19,8 +19,8 @@ var ground_services = {
 		setprop("/services/deicing_truck/de-ice", 0);
 		
 		# Set them all to 0 if the aircraft is not stationary
-		if (getprop("velocities/groundspeed-kt") >= 2) {
-			setprop("/services/chocks/enable", 0);
+		if (pts.Velocities.groundspeed.getValue() >= 2) {
+			pts.Controls.Gear.chocks.setValue(0);
 			setprop("/services/fuel-truck/enable", 0);
 			setprop("/services/deicing_truck/enable", 0);
 			setprop("/services/catering/enable", 0);
@@ -82,6 +82,6 @@ var ground_message = func (string) {
 	setprop("/sim/messages/ground", string);
 }
 
-setlistener("sim/signals/fdm-initialized", func {
+setlistener("/sim/signals/fdm-initialized", func {
 	ground_services.init();
 });

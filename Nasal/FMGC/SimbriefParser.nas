@@ -13,11 +13,11 @@ var SimbriefParser = {
 	fetch: func(username, i) {
 		me.inhibit = 1;
 		var stamp = systime();
-		http.save("https://www.simbrief.com/api/xml.fetcher.php?username=" ~ username, getprop('/sim/fg-home') ~ "/Export/A320-family-simbrief.xml")
+		http.save("https://www.simbrief.com/api/xml.fetcher.php?username=" ~ username, pts.Sim.fgHome.getValue() ~ "/Export/A320-family-simbrief.xml")
 			.fail(func { me.failure(i) })
 			.done(func {
 				var errs = [];
-				call(me.read, [(getprop('/sim/fg-home') ~ "/Export/A320-family-simbrief.xml"),i], SimbriefParser, {}, errs);
+				call(me.read, [(pts.Sim.fgHome.getValue() ~ "/Export/A320-family-simbrief.xml"),i], SimbriefParser, {}, errs);
 				if (size(errs) > 0) {
 					debug.printerror(errs);
 					me.failure(i);
@@ -112,7 +112,9 @@ var SimbriefParser = {
 			fmgc.FMGCInternal.arrApt = destinationID;
 			
 			atsu.ATISInstances[0].newStation(departureID);
+			atsu.ATISInstances[0].setType(1);
 			atsu.ATISInstances[1].newStation(destinationID);
+			atsu.ATISInstances[1].setType(0);
 			
 			fmgc.FMGCInternal.toFromSet = 1;
 			fmgc.FMGCNodes.toFromSet.setValue(1);
@@ -120,7 +122,6 @@ var SimbriefParser = {
 			fmgc.updateArptLatLon();
 			fmgc.updateARPT();
 		} else {
-			me.cleanupInvalid();
 			return nil;
 		}
 		
@@ -140,6 +141,7 @@ var SimbriefParser = {
 			if (size(alternates) != 0) {
 				fmgc.FMGCInternal.altAirport = alternateID;
 				atsu.ATISInstances[2].newStation(alternateID);
+				atsu.ATISInstances[2].setType(0);
 				fmgc.FMGCInternal.altAirportSet = 1;
 			}
 		}
@@ -270,7 +272,7 @@ var SimbriefParser = {
 		fmgc.FMGCInternal.costIndex = me.OFP.getNode("general/costindex").getValue();
 		fmgc.FMGCInternal.costIndexSet = 1;
 		fmgc.FMGCNodes.costIndex.setValue(fmgc.FMGCInternal.costIndex);
-		fmgc.FMGCInternal.tropo = me.OFP.getNode("general/avg_tropopause").getValue();
+		fmgc.FMGCInternal.tropo = math.round(me.OFP.getNode("general/avg_tropopause").getValue(), 10);
 		fmgc.FMGCInternal.tropoSet = 1;
 		
 		# Set cruise altitude

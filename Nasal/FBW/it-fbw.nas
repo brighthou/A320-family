@@ -64,8 +64,11 @@ var FBW = {
 		sec3: props.globals.getNode("/systems/failures/fctl/sec3"),
 		fac1: props.globals.getNode("/systems/failures/fctl/fac1"),
 		fac2: props.globals.getNode("/systems/failures/fctl/fac2"),
-		ths: props.globals.getNode("/systems/failures/fctl/ths-jam"),
-		spoilerl1: props.globals.getNode("/systems/failures/spoilers/spoiler-l1"),
+		rtlu1: props.globals.getNode("/systems/failures/fctl/rtlu-1"),
+		rtlu2: props.globals.getNode("/systems/failures/fctl/rtlu-2"),
+		rtlu2: props.globals.getNode("/systems/failures/fctl/rtlu-2"),
+		ths: props.globals.getNode(""),
+		spoilerl1: props.globals.getNode(""),
 		spoilerl2: props.globals.getNode("/systems/failures/spoilers/spoiler-l2"),
 		spoilerl3: props.globals.getNode("/systems/failures/spoilers/spoiler-l3"),
 		spoilerl4: props.globals.getNode("/systems/failures/spoilers/spoiler-l4"),
@@ -160,6 +163,8 @@ var FBW = {
 	},
 };
 
+var degradeLaw = 0;
+
 var update_loop = func {
 	elac1 = FBW.Computers.elac1.getBoolValue();
 	elac2 = FBW.Computers.elac2.getBoolValue();
@@ -207,34 +212,29 @@ var update_loop = func {
 			FBW.degradeYawLaw.setValue(1);
 		}
 		
-		if (law == 0 and !tripleIRFail) {
-			FBW.degradeLaw.setValue(1);
+		if ((law == 0 or law == 2 or law == 3) and !tripleIRFail) {
+			degradeLaw = 1;
 			if (!tripleSECFault) {
 				FBW.apOff = 1;
 			}
-		} elsif (tripleIRFail and (law == 0 or law == 1)) {
-			FBW.degradeLaw.setValue(2);
+		} elsif (tripleIRFail and (law == 0 or law == 1 or law == 3)) {
+			degradeLaw = 2;
 			FBW.apOff = 1;
+		}
+		
+		if (!pts.Gear.wow[1].getBoolValue() and !pts.Gear.wow[2].getBoolValue()) {
+			if (degradeLaw == 1 and pts.Controls.Gear.gearDown.getBoolValue()) {
+				FBW.degradeLaw.setValue(2); # todo 3 sec timer
+			} else {
+				FBW.degradeLaw.setValue(degradeLaw)
+			}
+		} else {
+			FBW.degradeLaw.setValue(degradeLaw)
 		}
 	} else {
 		FBW.degradeYawLaw.setValue(0);
 		FBW.degradeLaw.setValue(0);
 		FBW.apOff = 0;
-	}
-		
-	# degrade loop runs faster; reset this variable
-	law = FBW.activeLaw.getValue();
-	
-	if (!pts.Gear.wow[1].getBoolValue() and !pts.Gear.wow[2].getBoolValue()) {
-		if (pts.Controls.Gear.gearDown.getBoolValue()) {
-			if (law == 1) {
-				FBW.degradeLaw.setValue(2); # todo 3 sec timer
-			}
-		} else {
-			if (law == 2 and !tripleIRFail) {
-				FBW.degradeLaw.setValue(1); # todo 3 sec timer
-			}
-		}
 	}
 	
 	
@@ -338,7 +338,7 @@ var fbw_loop = func {
 	}
 }
 
-setlistener("systems/fctl/sec1", func() {
+setlistener("/systems/fctl/sec1", func() {
 	if (FBW.Computers.sec1.getBoolValue()) {
 		FBW.Failures.spoilerl3.setBoolValue(0);
 		FBW.Failures.spoilerr3.setBoolValue(0);
@@ -352,7 +352,7 @@ setlistener("systems/fctl/sec1", func() {
 	}
 }, 0, 0);
 
-setlistener("systems/fctl/sec2", func() {
+setlistener("/systems/fctl/sec2", func() {
 	if (FBW.Computers.sec2.getBoolValue()) {
 		FBW.Failures.spoilerl5.setBoolValue(0);
 		FBW.Failures.spoilerr5.setBoolValue(0);
@@ -362,7 +362,7 @@ setlistener("systems/fctl/sec2", func() {
 	}
 }, 0, 0);
 
-setlistener("systems/fctl/sec3", func() {
+setlistener("/systems/fctl/sec3", func() {
 	if (FBW.Computers.sec3.getBoolValue()) {
 		FBW.Failures.spoilerl1.setBoolValue(0);
 		FBW.Failures.spoilerr1.setBoolValue(0);

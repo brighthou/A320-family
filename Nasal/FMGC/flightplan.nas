@@ -32,6 +32,8 @@ var flightPlanController = {
 	
 	# These flags are only for the main flgiht-plan
 	active: props.globals.initNode("/FMGC/flightplan[2]/active", 0, "BOOL"),
+
+	changed: props.globals.initNode("/FMGC/flightplan[2]/changed", 0, "BOOL"),
 	
 	currentToWpt: nil, # container for the current TO waypoint ghost
 	currentToWptIndex: props.globals.initNode("/FMGC/flightplan[2]/current-wp", 0, "INT"),
@@ -241,6 +243,19 @@ var flightPlanController = {
 				}
 			}
 		}
+	},
+	
+	# changeOverflyType - toggle flyby type of passed waypoint
+	# args: index, plan, computer
+	#   index: index to toggle
+	#   plan: plan on which operation is performed
+	# If the passed waypoint exists, toggle its flyover attribute
+	changeOverFlyType: func(index, plan) {
+		wp = me.flightplans[plan].getWP(index);
+		if (wp == nil or wp.wp_name == "DISCONTINUITY" or wp.wp_name == "VECTORS") { return 1; };
+		
+		wp.fly_type = (wp.fly_type == "flyBy") ? "flyOver" : "flyBy";
+		return 2;
 	},
 	
 	# for these two remember to call flightPlanChanged. We are assuming this is called from a function which will all flightPlanChanged itself.
@@ -728,6 +743,8 @@ var flightPlanController = {
 		
 		if (size(split("/", text)) == 3) {
 			return me.getWPforPBD(text, index, thePlan);
+		} elsif (text == "@") {
+			return me.changeOverFlyType(index, thePlan);
 		} elsif (text == "CLR") {
 			return me.deleteWP(index, thePlan, 0);
 		} elsif (size(text) > 12) {
@@ -765,6 +782,9 @@ var flightPlanController = {
 			fmgc.FMGCInternal.fuelCalculating = 1;
 			fmgc.fuelCalculating.setValue(1);
 		}
+
+		if (n == 2) flightPlanController.changed.setBoolValue(1);
+
 		canvas_nd.A3XXRouteDriver.triggerSignal("fp-added");
 	},
 	

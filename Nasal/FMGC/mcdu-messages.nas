@@ -47,6 +47,13 @@ var MessageQueueController = {
 			me.messages.pop(index);
 		}
 	},
+	deleteWithText: func(text) {
+		foreach (var message; me.messages.vector) {
+			if (message.msgText == text) {
+				me.messages.remove(message);
+			}
+		}
+	},
 	clearQueue: func() {
 		me.messages.clear();
 	},
@@ -188,8 +195,9 @@ var MessageController = {
 	typeIIMessages: std.Vector.new([
 		TypeIIMessage.new("LAT DISCONT AHEAD", "amb", 0),TypeIIMessage.new("MORE DRAG"),TypeIIMessage.new("RWY/LS MISMATCH", "amb", 0),TypeIIMessage.new("STEP DELETED"),
 		TypeIIMessage.new("STEP NOW"),TypeIIMessage.new("TIME TO EXIT", "amb", 0),TypeIIMessage.new("V1/VR/V2 DISAGREE", "amb", 0),
-		TypeIIMessage.new("TO SPEED TOO LOW", "amb", 0),
+		TypeIIMessage.new("T.O SPEEDS TOO LOW", "amb", 0),TypeIIMessage.new("CHECK TAKE OFF DATA", "amb", 0),
 		TypeIIMessage.new("CHECK DEST DATA", "amb", 0), #p.533
+		TypeIIMessage.new("GPS PRIMARY"),TypeIIMessage.new("GPS PRIMARY LOST", "amb", 0),
 	]),
 	
 	# to speed to low - new on a320, margin against vmcg / vs1g
@@ -202,7 +210,7 @@ var MessageController = {
 	},
 	getMsgByText: func(text, theVector) {
 		foreach (var message; theVector) {
-			if (message.msgText = text) {
+			if (message.msgText == text) {
 				return message;
 			}
 		}
