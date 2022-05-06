@@ -30,7 +30,7 @@ var execLoop = func
     emesary.GlobalTransmitter.NotifyAll(notifications.frameNotification);
 
     notifications.frameNotification.FrameCount = notifications.frameNotification.FrameCount + 1;
-	frame_inc = 0.0333; #30 Hz
+	frame_inc = 0.02; #50 Hz
     if (frame_inc != cur_frame_inc) {
         cur_frame_inc = frame_inc;
     }
@@ -42,6 +42,7 @@ input = {
 	frame_rate: "/sim/frame-rate",
 	elapsedTime: "/sim/time/elapsed-sec",
 	FWCPhase: "/ECAM/warning-phase",
+	acconfigUnits: "/systems/acconfig/options/weight-kgs",
 	
 	# Just about everything uses these properties at some stage, lets add them here!
 	gear0Wow: "/gear/gear[0]/wow",

@@ -35,8 +35,26 @@
     <filter>
         <type>gain</type>
         <gain>1.0</gain>
+        <input>/controls/lighting/fcu-digit-norm-tied</input>
+        <output>/controls/lighting/fcu-digit-norm</output>
+    </filter>
+	
+    <filter>
+        <type>gain</type>
+        <gain>1.0</gain>
         <input>/controls/lighting/main-panel-norm-tied</input>
         <output>/controls/lighting/main-panel-norm</output>
+    </filter>
+	
+    <filter>
+        <type>gain</type>
+        <gain>1.0</gain>
+        <input>
+			<property>/controls/lighting/main-panel-norm-tied</property>
+			<min>0.15</min>
+			<max>1.0</max>
+		</input>
+        <output>/controls/lighting/main-panel-norm-digital</output>
     </filter>
 	
     <filter>
@@ -49,8 +67,11 @@
     <filter>
         <type>gain</type>
         <gain>1.0</gain>
-        <input>/controls/lighting/annunciator-lights-tied</input>
-        <output>/controls/lighting/annunciator-lights</output>
+        <input>
+			<property>/controls/lighting/overhead-panel-norm-tied</property>
+			<min>0.15</min>
+			<max>1.0</max>
+		</input>
+        <output>/controls/lighting/overhead-panel-norm-digital</output>
     </filter>
-	
 </PropertyList>

@@ -13,6 +13,149 @@ var assert_m = canvas.assert_m;
 var wxr_live_tree = "/instrumentation/wxr";
 var adirs_3 = props.globals.getNode("/instrumentation/efis[0]/nd/ir-3", 1);
 
+var easeArrow = {
+	new: func(elem) {
+		var m = {parents: [easeArrow]};
+		m.req_rot_rad = 0;
+		m.req_rot_deg = 0;
+		m.last_rot_deg = nil;
+		m.last_rot_rad = 0;
+		m.element = elem;
+		m.time = 0;
+		m.duration = 0;
+		m.startval = 0;
+		m.diffval = 0;
+		m.nav = "";
+		m.mhz = 0;
+		m.changed = 1;
+		return m;
+	},
+	setVisible: func(v) {
+		if (v == 1 and me.last_rot_deg == nil) me.setzero();
+		me.element.setVisible(v);
+	},
+	hide: func {
+		me.element.hide();
+	},
+	reset: func {			
+		#me.element.hide();
+		me.duration = 0;
+		me.changed = 1;		
+	},
+	setzero: func {
+		me.duration = 0;
+		me.last_rot_deg = 360 - getprop("orientation/heading-deg");
+		me.last_rot_rad = me.last_rot_deg * D2R;
+		me.req_rot_rad = me.last_rot_rad;
+		me.element.setRotation(me.last_rot_rad);
+	},
+	listen: func (path) {
+		me.nav = path ~ "/frequencies/selected-mhz";
+		setlistener(me.nav, func {
+			var freq = getprop(me.nav);
+			if (me.mhz != freq) {				
+				me.mhz = freq;
+				me.reset();
+			}
+		});		
+	},
+	setRotation: func(rad)  {			
+		var deg = 0;
+		var gap = 0;
+		if (me.last_rot_deg == nil) me.setzero();
+		rad = math.round(rad * 1000)  / 1000;
+		gap = math.abs(rad - me.req_rot_rad);
+		#if (gap>=180*D2R) gap = 360*D2R - gap;
+		if (gap>0.0009) {
+			#print("VOR rotation");			
+			#else if (me.duration>0) gap = math.abs(rad - me.last_rot_rad);
+			deg = rad * 57.29578;
+			#me.duration = 0;
+			if (me.duration > 0) {
+				var add = deg - me.req_rot_deg;
+				if (add>=180) add = add - 360;
+				me.diffval += add;
+				me.duration = math.abs( math.round(me.diffval * 0.19) );  # rad 36/3
+			}
+			else if (me.changed == 1) {				
+				#if (me.last_rot_deg == nil) me.reset();
+				me.startval = me.last_rot_deg;
+				me.diffval = deg - me.last_rot_deg;
+				while (me.diffval<0) me.diffval += 360;				
+				if (me.changed == 1 and me.diffval < 180) me.diffval += 360;
+				#print("VOR animation:" ~ me.diffval);
+				#me.time = 0;
+				me.duration = math.abs( math.round(me.diffval * 0.19) );  # rad 36/3
+			} else {
+				me.duration = 0;
+			}
+			if (me.duration < 2) {
+				me.last_rot_rad = rad;
+				me.last_rot_deg = deg;
+				me.element.setRotation(rad);
+				me.duration = 0;
+				me.time = 0;
+				me.changed = 0;
+			}
+			me.req_rot_rad = rad;
+			me.req_rot_deg = deg;
+		}
+		if (me.duration > 0) {
+			var tx = me.time / me.duration;
+			if (tx>1) tx = 1;
+			#thanks to https://easings.net/#easeOutCubic
+			deg = (1 - math.pow(1 - tx, 3)) * me.diffval + me.startval;
+			deg = math.mod(deg,360);				
+			#print("DEG: " ~ deg);
+			me.element.setRotation(deg * D2R);
+			me.time += 1;
+			if (tx>=1) {
+				me.duration = 0;
+				me.time = 0;
+				me.changed = 0;
+				me.last_rot_deg = deg;
+				me.last_rot_rad = rad;
+			}
+		}
+
+	}
+};
+
+var symbolDistNM = {
+	new: func(name, nd) {
+		var m = {parents: [symbolDistNM] };
+		m.group = nd.getElementById(name);
+		m.expn = nd.getElementById(name ~ "1");
+		m.mant = nd.getElementById(name ~ "2");
+		return m;
+	},
+	hide: func {
+		me.group.hide();
+	},
+	show: func {
+		me.group.show();
+	},
+	setText: func(txt) {
+		var parts = ( txt != "" ) ? split( "." , txt ) : nil;
+		if ( parts != nil and size(parts) == 2 ) {
+			me.expn.setText(parts[0]);
+			me.mant.setText("." ~ parts[1]);
+		} else {
+			me.expn.setText(txt);
+			me.mant.setText("");
+		}
+	},
+	setColor: func(r,g,b) {
+		me.expn.setColor(r,g,b);
+		me.mant.setColor(r,g,b);
+	},
+	setFloat: func(val) {
+		var parts = split( "." , sprintf("%03.1f",val) );
+		me.expn.setText(parts[0]);
+		me.mant.setText("." ~ parts[1]);
+	}
+};
+
 canvas.NavDisplay.set_switch = func(s, v) {
 	var switch = me.efis_switches[s];
 	if(switch == nil) return nil;
@@ -68,18 +211,28 @@ canvas.NavDisplay.newMFD = func(canvas_group, parent=nil, nd_options=nil, update
 	### this is the "old" method that"s less flexible, we want to use the style hash instead (see above)
 	# because things are much better configurable that way
 	# now look up all required SVG elements and initialize member fields using the same name  to have a convenient handle
-	foreach(var element; ["dmeLDist","dmeRDist","dmeL","dmeR","vorL","vorR","vorLId","vorRId",
-			"status.wxr","status.wpt","status.sta","status.arpt"])
+	foreach(var element; ["dmeL","dmeR","vorL","vorR","vorLId","vorRId",
+			"status.wxr","status.wpt","status.sta","status.arpt","terrHI","terrLO","TerrLabel","terrAhead","terrAltGroup",
+			"vorLIdtuneMode","vorRIdtuneMode"])
 	me.symbols[element] = me.nd.getElementById(element);
+
+	foreach(var element; ["dmeLDist","dmeRDist"])
+	me.symbols[element] = symbolDistNM.new( element, me.nd );
+
+	me.symbols.dmeLDist.setColor(0.195,0.96,0.097);
+	me.symbols.dmeRDist.setColor(0.195,0.96,0.097);
 
 	# load elements from vector image, and create instance variables using identical names, and call updateCenter() on each
 	# anything that needs updatecenter called, should be added to the vector here
 	#
-	foreach(var element; ["staArrowL2","staArrowR2","staFromL2","staToL2","staFromR2","staToR2",
-			"hdgTrk","trkInd","hdgBug","HdgBugCRT","TrkBugLCD","HdgBugLCD","curHdgPtr",
+	foreach(var element; ["staFromL2","staToL2","staFromR2","staToR2",
+			"hdgTrk","hdgBug","HdgBugCRT","TrkBugLCD","HdgBugLCD","curHdgPtr",
 			"HdgBugCRT2","TrkBugLCD2","HdgBugLCD2","hdgBug2","selHdgLine","selHdgLine2","curHdgPtr2",
-			"staArrowL","staArrowR","staToL","staFromL","staToR","staFromR"] )
+			"staToL","staFromL","staToR","staFromR"] )
 	me.symbols[element] = me.nd.getElementById(element).updateCenter();
+
+	foreach(var element; ["staArrowL2","staArrowR2","staArrowL","staArrowR"] )
+	me.symbols[element] = easeArrow.new( me.nd.getElementById(element).updateCenter() );
 
 	me.map = me.nd.createChild("map","map")
 	.set("clip", "rect(124, 1024, 1024, 0)")
@@ -99,6 +252,12 @@ canvas.NavDisplay.newMFD = func(canvas_group, parent=nil, nd_options=nil, update
 		if (freq == nav1 or freq == nav2) return 1;
 		return 0;
 	}
+
+	# listen for (VOR) NAV frequency change
+	me.symbols.staArrowL.listen(vor1_path);
+	me.symbols.staArrowL2.listen(vor1_path);
+	me.symbols.staArrowR.listen(vor2_path);
+	me.symbols.staArrowR2.listen(vor2_path);
 
 	# another predicate for the draw controller
 	var get_course_by_freq = func(freq) {
@@ -414,7 +573,31 @@ canvas.NavDisplay.update = func() # FIXME: This stuff is still too aircraft spec
 	var dme1_path = "/instrumentation/dme[2]";
 	var dme2_path = "/instrumentation/dme[3]";
 
+	
+	if(me.get_switch("toggle_lh_vor_adf") == 1) {
+		if (fmgc.FMGCInternal.VOR1.freqSet) {
+			me.symbols.vorLIdtuneMode.show();
+		} else {
+			me.symbols.vorLIdtuneMode.hide();
+		}
+	} else if(me.get_switch("toggle_lh_vor_adf") == -1) {
+		if (fmgc.FMGCInternal.ADF1.freqSet) {
+			me.symbols.vorLIdtuneMode.show();
+		} else {
+			me.symbols.vorLIdtuneMode.hide();
+		}
+	} else {
+		me.symbols.vorLIdtuneMode.hide();
+	}
+	
 	if(me.get_switch("toggle_rh_vor_adf") == 1) {
+		
+		if (fmgc.FMGCInternal.VOR2.freqSet) {
+			me.symbols.vorRIdtuneMode.show();
+		} else {
+			me.symbols.vorRIdtuneMode.hide();
+		}
+		
 		me.symbols.vorR.setText("VOR R");
 		me.symbols.vorR.setColor(0.195,0.96,0.097);
 		me.symbols.dmeR.setText("DME");
@@ -429,39 +612,43 @@ canvas.NavDisplay.update = func() # FIXME: This stuff is still too aircraft spec
 		else me.symbols.dmeRDist.setText(" ---");
 			me.symbols.dmeRDist.setColor(0.195,0.96,0.097);
 	} elsif(me.get_switch("toggle_rh_vor_adf") == -1) {
+	
+		if (fmgc.FMGCInternal.ADF2.freqSet) {
+			me.symbols.vorRIdtuneMode.show();
+		} else {
+			me.symbols.vorRIdtuneMode.hide();
+		}
+		
 		me.symbols.vorR.setText("ADF R");
 		me.symbols.vorR.setColor(0,0.6,0.85);
 		me.symbols.dmeR.setText("");
 		me.symbols.dmeR.setColor(0,0.6,0.85);
 		if((var navident=getprop("/instrumentation/adf[1]/ident")) != "")
 			me.symbols.vorRId.setText(navident);
-		else me.symbols.vorRId.setText(sprintf("%3d",getprop("/instrumentation/adf[1]/frequencies/selected-khz")));
+		else me.symbols.vorRId.setText(sprintf("%3d",pts.Instrumentation.Adf.Frequencies.selectedKhz[1].getValue()));
 			me.symbols.vorRId.setColor(0,0.6,0.85);
 		me.symbols.dmeRDist.setText("");
 		me.symbols.dmeRDist.setColor(0,0.6,0.85);
 	} else {
+		me.symbols.vorRIdtuneMode.hide();
 		me.symbols.vorR.setText("");
 		me.symbols.dmeR.setText("");
 		me.symbols.vorRId.setText("");
 		me.symbols.dmeRDist.setText("");
 	}
 
-	# Hide heading bug 10 secs after change
-	var vhdg_bug = getprop("/it-autoflight/input/hdg") or 0;
-	var hdg_bug_active = getprop("/it-autoflight/custom/show-hdg");
-	if (hdg_bug_active == nil)
-		hdg_bug_active = 1;
+	# Hide heading bug 45 secs after change
+	var vhdg_bug = fmgc.Input.hdg.getValue();
+	var hdg_bug_active = fmgc.Custom.showHdg.getBoolValue();
 
 	if((me.in_mode("toggle_display_mode", ["MAP"]) and me.get_switch("toggle_display_type") == "CRT")
 	   or (me.get_switch("toggle_track_heading") and me.get_switch("toggle_display_type") == "LCD"))
 	{
-		me.symbols.trkInd.setRotation(0);
 		me.symbols.curHdgPtr.setRotation((userHdg-userTrk)*D2R);
 		me.symbols.curHdgPtr2.setRotation((userHdg-userTrk)*D2R);
 	}
 	else
 	{
-		me.symbols.trkInd.setRotation((userTrk-userHdg)*D2R);
 		me.symbols.curHdgPtr.setRotation(0);
 		me.symbols.curHdgPtr2.setRotation(0);
 	}
@@ -497,36 +684,31 @@ canvas.NavDisplay.update = func() # FIXME: This stuff is still too aircraft spec
 	}
 	var adf0hdg = getprop("/instrumentation/adf/indicated-bearing-deg");
 	var adf1hdg = getprop("/instrumentation/adf[1]/indicated-bearing-deg");
-	if(!me.get_switch("toggle_centered"))
-	{
-		if(me.in_mode("toggle_display_mode", ["PLAN"]) or (me.adirs_property.getValue() != 1 and (adirs_3.getValue() != 1 or att_switch.getValue() != me.attitude_heading_setting)))
-			me.symbols.trkInd.hide();
-		else
-			me.symbols.trkInd.show();
+	if(!me.get_switch("toggle_centered")) {
 		if((getprop("/instrumentation/nav[2]/in-range") and me.get_switch("toggle_lh_vor_adf") == 1)) {
-			me.symbols.staArrowL.setVisible(staPtrVis);
 			me.symbols.staToL.setColor(0.195,0.96,0.097);
 			me.symbols.staFromL.setColor(0.195,0.96,0.097);
 			me.symbols.staArrowL.setRotation(nav0hdg*D2R);
+			me.symbols.staArrowL.setVisible(staPtrVis);
 		}
 		elsif(getprop("/instrumentation/adf/in-range") and (me.get_switch("toggle_lh_vor_adf") == -1)) {
-			me.symbols.staArrowL.setVisible(staPtrVis);
 			me.symbols.staToL.setColor(0,0.6,0.85);
 			me.symbols.staFromL.setColor(0,0.6,0.85);
 			me.symbols.staArrowL.setRotation(adf0hdg*D2R);
+			me.symbols.staArrowL.setVisible(staPtrVis);
 		} else {
 			me.symbols.staArrowL.hide();
 		}
 		if((getprop("/instrumentation/nav[3]/in-range") and me.get_switch("toggle_rh_vor_adf") == 1)) {
-			me.symbols.staArrowR.setVisible(staPtrVis);
 			me.symbols.staToR.setColor(0.195,0.96,0.097);
 			me.symbols.staFromR.setColor(0.195,0.96,0.097);
 			me.symbols.staArrowR.setRotation(nav1hdg*D2R);
-		} elsif(getprop("/instrumentation/adf[1]/in-range") and (me.get_switch("toggle_rh_vor_adf") == -1)) {
 			me.symbols.staArrowR.setVisible(staPtrVis);
+		} elsif(getprop("/instrumentation/adf[1]/in-range") and (me.get_switch("toggle_rh_vor_adf") == -1)) {
 			me.symbols.staToR.setColor(0,0.6,0.85);
 			me.symbols.staFromR.setColor(0,0.6,0.85);
 			me.symbols.staArrowR.setRotation(adf1hdg*D2R);
+			me.symbols.staArrowR.setVisible(staPtrVis);
 		} else {
 			me.symbols.staArrowR.hide();
 		}
@@ -556,30 +738,29 @@ canvas.NavDisplay.update = func() # FIXME: This stuff is still too aircraft spec
 		}
 		me.symbols.selHdgLine.setVisible(staPtrVis and hdg_bug_active);
 	} else {
-		me.symbols.trkInd.hide();
 		if((getprop("/instrumentation/nav[2]/in-range") and me.get_switch("toggle_lh_vor_adf") == 1)) {
-			me.symbols.staArrowL2.setVisible(staPtrVis);
 			me.symbols.staFromL2.setColor(0.195,0.96,0.097);
 			me.symbols.staToL2.setColor(0.195,0.96,0.097);
 			me.symbols.staArrowL2.setRotation(nav0hdg*D2R);
-		} elsif(getprop("/instrumentation/adf/in-range") and (me.get_switch("toggle_lh_vor_adf") == -1)) {
 			me.symbols.staArrowL2.setVisible(staPtrVis);
+		} elsif(getprop("/instrumentation/adf/in-range") and (me.get_switch("toggle_lh_vor_adf") == -1)) {
 			me.symbols.staFromL2.setColor(0,0.6,0.85);
 			me.symbols.staToL2.setColor(0,0.6,0.85);
 			me.symbols.staArrowL2.setRotation(adf0hdg*D2R);
+			me.symbols.staArrowL2.setVisible(staPtrVis);
 		} else {
 			me.symbols.staArrowL2.hide();
 		}
 		if((getprop("/instrumentation/nav[3]/in-range") and me.get_switch("toggle_rh_vor_adf") == 1)) {
-			me.symbols.staArrowR2.setVisible(staPtrVis);
 			me.symbols.staFromR2.setColor(0.195,0.96,0.097);
 			me.symbols.staToR2.setColor(0.195,0.96,0.097);
 			me.symbols.staArrowR2.setRotation(nav1hdg*D2R);
-		} elsif(getprop("/instrumentation/adf[1]/in-range") and (me.get_switch("toggle_rh_vor_adf") == -1)) {
 			me.symbols.staArrowR2.setVisible(staPtrVis);
+		} elsif(getprop("/instrumentation/adf[1]/in-range") and (me.get_switch("toggle_rh_vor_adf") == -1)) {
 			me.symbols.staFromR2.setColor(0,0.6,0.85);
 			me.symbols.staToR2.setColor(0,0.6,0.85);
 			me.symbols.staArrowR2.setRotation(adf1hdg*D2R);
+			me.symbols.staArrowR2.setVisible(staPtrVis);
 		} else {
 			me.symbols.staArrowR2.hide();
 		}

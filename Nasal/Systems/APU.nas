@@ -29,6 +29,7 @@ var APU = {
 	bleedTime: 0,
 	cooldownEndTime: 0,
 	fastStart: 0,
+	inhibitEMERELEC: 0,
 	_count: 0,
 	warnings: {
 		lowOilLevel: 0,
@@ -62,6 +63,7 @@ var APU = {
 		me.signals.fault.setValue(0);
 		me.signals.autoshutdown = 0;
 		me.signals.emer = 0;
+		me.inhibitEMERELEC = 0;
 		checkApuStartTimer.stop();
 		apuStartTimer.stop();
 		apuStartTimer2.stop();
@@ -119,7 +121,7 @@ var APU = {
 		if (me.fastStart) {
 			me.inletFlap.setpos(1);
 		}
-		if (pts.APU.rpm.getValue() < 7 and me.fuelValvePos.getValue() and me.inletFlapPos.getValue() == 1 and me.signals.oilTestComplete and !me.warnings.lowOilLevel) {
+		if (pts.APU.rpm.getValue() < 7 and me.fuelValvePos.getValue() and me.inletFlapPos.getValue() == 1 and me.signals.oilTestComplete and !me.warnings.lowOilLevel and !me.inhibitEMERELEC) {
 			me.setState(4);
 			me.listenStopSignal = 1;
 			checkApuStartTimer.stop();
@@ -270,22 +272,11 @@ var APU = {
 			if (me.state == 5 and APUNodes.Oil.pressure.getValue() < 35 or APUNodes.Oil.temperature.getValue() > 135) {
 				me.autoStop();
 			}
-			if (systems.ELEC.Bus.dcBat.getValue() < 25) {	
-				if (!me._powerLost) {
-					me._powerLost = 1;
-					settimer(func() {
-						if (me._powerLost) {
-							if (me.GenericControls.starter.getValue()) {
-								me.GenericControls.starter.setValue(0);
-							}
-							if (me.state != 0) {
-								me.autoStop();
-							}
-						}
-					}, 0.2);
-				}
+			
+			if (systems.ELEC.EmerElec.getValue() == 1 and (systems.ELEC.EmerElec45.getValue() != 1 and systems.ELEC.Source.EmerGen.voltsRelay.getValue() < 110)) {
+				me.inhibitEMERELEC = 1;
 			} else {
-				me._powerLost = 0;
+				me.inhibitEMERELEC = 0;
 			}
 		}
 	},
@@ -306,6 +297,19 @@ var APUController = {
 		}
 	}
 };
+
+setlistener("/systems/apu/shutdown-power-loss", func(val) {
+	if (APUController.APU != nil) {
+		if (val.getBoolValue()) {
+			if (APUController.APU.GenericControls.starter.getValue()) {
+				APUController.APU.GenericControls.starter.setValue(0);
+			}
+			if (APUController.APU.state != 0) {
+				APUController.APU.autoStop();
+			}
+		}
+	}
+}, 0, 0);
 
 var _masterTime = 0;
 setlistener("/controls/apu/master", func() {

@@ -64,13 +64,17 @@ var cargofwd = aircraft.door.new("/sim/model/door-positions/cargofwd", 10);
 # Seat armrests in the flight deck (unused)
 var armrests = aircraft.door.new("/sim/model/door-positions/armrests", 2);
 
+# Cockpit door - TODO animation
+var cockpitdoor = aircraft.door.new("/sim/model/door-positions/doorc", 1);
+setprop("/sim/model/door-positions/doorc/lock-status",0);
+
 # door opener/closer
 var triggerDoor = func(door, doorName, doorDesc) {
 	if (getprop("/sim/model/door-positions/" ~ doorName ~ "/position-norm") > 0) {
 		gui.popupTip("Closing " ~ doorDesc ~ " door");
 		door.toggle();
 	} else {
-		if (getprop("/velocities/groundspeed-kt") > 5) {
+		if (pts.Velocities.groundspeed.getValue() > 5) {
 			gui.popupTip("You cannot open the doors while the aircraft is moving!");
 		} else {
 			gui.popupTip("Opening " ~ doorDesc ~ " door");
@@ -78,6 +82,25 @@ var triggerDoor = func(door, doorName, doorDesc) {
 		}
 	}
 };
+
+setlistener("/controls/doors/doorc-switch",func(a){
+	setprop("sim/sounde/switch1", 1);
+	if (systems.ELEC.Bus.dc1.getValue() > 25 or systems.ELEC.Bus.dc2.getValue() > 25) {
+		var pos = a.getValue();
+		var current = getprop("/sim/model/door-positions/doorc/lock-status");
+		if (pos == 1 and current == 0) {		## LOCK
+			settimer( func {
+				if (a.getValue() == pos) setprop("/sim/model/door-positions/doorc/lock-status",1);
+			},0.4);
+		}
+		else if (pos == -1 and current == 1) {		## UNLOCK
+			settimer( func {
+				if (a.getValue() == pos) setprop("/sim/model/door-positions/doorc/lock-status",0);
+			},0.3);
+		}
+		#setprop("/sim/model/door-positions/doorc/lock-status",-9); ## FAULT
+	}
+},0,0);
 
 ###########
 # Systems #
@@ -88,7 +111,7 @@ var A320Libraries = nil;
 var systemsInit = func() {
 	systemsInitialized = 0;
 	fbw.FBW.init();
-	effects.light_manager.init();
+	effects.lightManager.init();
 	systems.ELEC.init();
 	systems.PNEU.init();
 	systems.HYD.init();
@@ -133,47 +156,8 @@ setlistener("/sim/signals/fdm-initialized", func() {
 	emesary.GlobalTransmitter.Register(A320Libraries);
 });
 
-var collectorTankL = props.globals.getNode("/fdm/jsbsim/propulsion/tank[5]/contents-lbs");
-var collectorTankR = props.globals.getNode("/fdm/jsbsim/propulsion/tank[6]/contents-lbs");
-var groundAir = props.globals.getNode("/controls/pneumatics/switches/groundair");
-var groundCart = props.globals.getNode("/controls/electrical/ground-cart");
-var chocks = props.globals.getNode("/services/chocks/enable");
-var groundspeed = 0;
-var stateL = 0;
-var stateR = 0;
-
-var seatbeltLight = props.globals.getNode("/controls/lighting/seatbelt-sign");
-var noSmokingLight = props.globals.getNode("/controls/lighting/no-smoking-sign");
-
-var update_items = [
-	props.UpdateManager.FromHashValue("seatbelt", nil, func(val) {
-		if (val) {
-			if (!seatbeltLight.getBoolValue()) {
-				seatbeltLight.setValue(1);
-			}
-		} else {
-			if (seatbeltLight.getBoolValue()) {
-				seatbeltLight.setValue(0);
-			}
-		}
-	}),
-	props.UpdateManager.FromHashList(["noSmoking","gearPosNorm"], nil, func(val) {
-		if (val.noSmoking == 1) {
-			if (!noSmokingLight.getBoolValue()) {
-				noSmokingLight.setBoolValue(1);
-			}
-		} elsif (val.noSmoking == 0.5 and val.gearPosNorm != 0) { # todo: should be when uplocks not engaged
-			if (!noSmokingLight.getBoolValue()) {
-				noSmokingLight.setBoolValue(1);
-			}
-		} else {
-			noSmokingLight.setBoolValue(0); # sign stays on in cabin but sound still occurs
-		}
-	}),
-];
-
 var systemsLoop = func(notification) {
-	if (!systemsInitialized) { return; }
+	if (!systemsInitialized and getprop("/systems/acconfig/mismatch-code") != "0x000") { return; }
 	systems.PNEU.loop(notification);
 	systems.ADIRS.loop(notification);
 	systems.BrakeSys.update(notification);
@@ -187,67 +171,70 @@ var systemsLoop = func(notification) {
 	atsu.ATSU.loop();
 	libraries.BUTTONS.update();
 	
-	if ((notification.engine1State == 2 or notification.engine1State == 3) and collectorTankL.getValue() < 1) {
+	if (notification.engine1State >= 2 and pts.Fdm.JSBsim.Propulsion.Tank.contentsLbs[5].getValue() < 1) {
 		systems.cutoff_one();
 	}
-	if ((notification.engine2State == 2 or notification.engine2State == 3) and collectorTankR.getValue() < 1) {
-		systems.cutoff_two();
-	}
 	
-	foreach (var update_item; update_items) {
-		update_item.update(notification);
+	if (notification.engine2State >= 2 and pts.Fdm.JSBsim.Propulsion.Tank.contentsLbs[6].getValue() < 1) {
+		systems.cutoff_two();
 	}
 }
 
 # GPWS
 var GPWS = {
-	inhibitNode: props.globals.getNode("/instrumentation/mk-viii/inputs/discretes/gpws-inhibit"),
-	volume: props.globals.getNode("/instrumentation/mk-viii/speaker/volume"),
-	flapAllOverride: props.globals.getNode("/instrumentation/mk-viii/inputs/discretes/momentary-flap-all-override"),
-	flap3Override: props.globals.getNode("/instrumentation/mk-viii/inputs/discretes/momentary-flap-3-override"),
-	flapOverride: props.globals.getNode("/instrumentation/mk-viii/inputs/discretes/momentary-flap-override"),
+	alertMode: props.globals.initNode("/instrumentation/mk-viii/outputs/alert-mode", 0, "INT"),
+	alert: props.globals.getNode("instrumentation/mk-viii/outputs/discretes/gpws-alert"),
+	warning: props.globals.getNode("instrumentation/mk-viii/outputs/discretes/gpws-warning"),
 };
 
-setlistener("/instrumentation/mk-viii/inputs/discretes/gpws-inhibit", func() {
-	if (GPWS.inhibitNode.getBoolValue()) {
-		GPWS.volume.setValue(2);
+# GPWS alert pooling for get mode change - a little esoteric way but it works
+var GPWSAlertStatus = 0;
+var gpws_alert_watch = maketimer(0.8, func() {	
+	if (GPWS.warning.getValue()) {
+		GPWSAlertStatus = 2; # MODE2 - warning - RED
+		
+		# Turn on Terr on ND after a GPWS warning
+		setprop("/controls/switches/terr_on_nd_l", 1);
+		setprop("/instrumentation/efis/inputs/terr", 1);
+		setprop("/controls/switches/terr_on_nd_r", 1);
+		setprop("/instrumentation/efis[1]/inputs/terr", 1);
+		
+	} else if (GPWS.alert.getValue()) {
+		GPWSAlertStatus = 1; # MODE1 - caution - YELLOW
 	} else {
-		GPWS.volume.setValue(0);
+		GPWSAlertStatus = 0;
 	}
-}, 0, 0);
+	
+	if (GPWS.alertMode.getValue() != GPWSAlertStatus) {
+		GPWS.alertMode.setValue(GPWSAlertStatus);
+	}
+});
 
-var updateGPWSFlap = func() {
-	if (GPWS.flapAllOverride.getBoolValue() or (GPWS.flap3Override.getBoolValue() and pts.Controls.Flight.flapsPos.getValue() >= 4)) {
-		GPWS.flapOverride.setBoolValue(1);
+# detect GPWS switch status
+setlistener("/instrumentation/mk-viii/inputs/discretes/ta-tcf-inhibit", func (val) {
+	if (!val.getBoolValue()) {
+		gpws_alert_watch.start();
 	} else {
-		GPWS.flapOverride.setBoolValue(0);
+		gpws_alert_watch.stop();
 	}
-}
+}, 1, 0);
 
-setlistener("/instrumentation/mk-viii/inputs/discretes/momentary-flap-all-override", func() {
-	updateGPWSFlap();
-}, 0, 0);
-
-setlistener("/instrumentation/mk-viii/inputs/discretes/momentary-flap-3-override", func() {
-	updateGPWSFlap();
+# Steep ILS
+setlistener("/options/steep-ils", func(val) {
+	if (val.getValue()) {
+		pts.Instrumentation.MKVII.Inputs.Discretes.steepApproach.setValue(1);
+	} else {
+		pts.Instrumentation.MKVII.Inputs.Discretes.steepApproach.setValue(0);
+	}
 }, 0, 0);
 
 # Replay
 var replayState = props.globals.getNode("/sim/replay/replay-state");
-setlistener("/sim/replay/replay-state", func() {
-	if (replayState.getBoolValue()) {
+setlistener(replayState, func(v) {
+	if (v.getBoolValue()) {
 	} else {
 		acconfig.colddark();
 		gui.popupTip("Replay Ended: Setting Cold and Dark state...");
-	}
-}, 0, 0);
-
-# Steep ILS
-setlistener("/options/steep-ils", func() {
-	if (getprop("/options/steep-ils") == 1) {
-		setprop("/instrumentation/mk-viii/inputs/discretes/steep-approach", 1);
-	} else {
-		setprop("/instrumentation/mk-viii/inputs/discretes/steep-approach", 0);
 	}
 }, 0, 0);
 
@@ -373,9 +360,11 @@ var LibrariesRecipient =
 
 var input = {
 	# Libraries
-	"seatbelt": "/controls/switches/seatbelt-sign",
-	"noSmoking": "/controls/switches/no-smoking-sign",
 	"gearPosNorm": "/gear/gear[0]/position-norm",
+	"gearPosNorm1": "/gear/gear[1]/position-norm",
+	"gearPosNorm2": "/gear/gear[2]/position-norm",
+	"engine1Running": "/engines/engine[0]/running",
+	"engine2Running": "/engines/engine[1]/running",
 };
 
 foreach (var name; keys(input)) {
@@ -384,8 +373,8 @@ foreach (var name; keys(input)) {
 
 # TODO split EFIS altimeters
 var newinhg = nil;
-setlistener("/instrumentation/altimeter/setting-inhg", func() {
-	newinhg = getprop("/instrumentation/altimeter/setting-inhg");
+setlistener("/instrumentation/altimeter/setting-inhg", func(val) {
+	newinhg = val.getValue();
 	setprop("/instrumentation/altimeter[1]/setting-inhg", newinhg);
 	setprop("/instrumentation/altimeter[2]/setting-inhg", newinhg);
 	setprop("/instrumentation/altimeter[3]/setting-inhg", newinhg);
@@ -394,8 +383,8 @@ setlistener("/instrumentation/altimeter/setting-inhg", func() {
 }, 0, 0);
 
 var newhpa = nil;
-setlistener("/instrumentation/altimeter/setting-hpa", func() {
-	newhpa = getprop("/instrumentation/altimeter/setting-hpa");
+setlistener("/instrumentation/altimeter/setting-hpa", func(val) {
+	newhpa = val.getValue();
 	setprop("/instrumentation/altimeter[1]/setting-hpa", newhpa);
 	setprop("/instrumentation/altimeter[2]/setting-hpa", newhpa);
 	setprop("/instrumentation/altimeter[3]/setting-hpa", newhpa);

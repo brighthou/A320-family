@@ -2,6 +2,9 @@ var flapsPos = nil;
 var LBS2KGS = 0.4535924;
 var slatLockGoing = 0;
 var slatLockFlash = 0;
+var epr1 = 1;
+var epr2 = 1;
+var eprLim = 1;
 var acconfig_weight_kgs = props.globals.getNode("/systems/acconfig/options/weight-kgs", 1);
 var acconfig = props.globals.getNode("/systems/acconfig/autoconfig-running", 1);
 var du3_test = props.globals.initNode("/instrumentation/du/du3-test", 0, "BOOL");
@@ -45,7 +48,7 @@ var canvas_upperECAM = {
 		obj.typeString = type;
 		
 		obj.font_mapper = func(family, weight) {
-			return "LiberationFonts/LiberationSans-Regular.ttf";
+			return "ECAMFontRegular.ttf";
 		};
 		
 		canvas.parsesvg(obj.group, svg, {"font-mapper": obj.font_mapper} );
@@ -72,6 +75,23 @@ var canvas_upperECAM = {
 		foreach(var key; obj.getKeysTest()) {
 			obj[key] = obj.test.getElementById(key);
 		};
+		
+		obj["ECAML1"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAML2"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAML3"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAML4"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAML5"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAML6"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAML7"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAML8"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAMR1"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAMR2"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAMR3"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAMR4"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAMR5"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAMR6"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAMR7"].setFont("ECAMFontBold100em.ttf");
+		obj["ECAMR8"].setFont("ECAMFontBold100em.ttf");
 		
 		obj.units = acconfig_weight_kgs.getValue();
 		
@@ -147,10 +167,10 @@ var canvas_upperECAM = {
 					obj["FlapDots"].hide();
 				}
 			}),
-			props.UpdateManager.FromHashValue("flexTemp", 1, func(val) {
+			props.UpdateManager.FromHashValue("flexTemp", 0.5, func(val) {
 				obj["FlxLimTemp"].setText(sprintf("%2.0d",val));
 			}),
-			props.UpdateManager.FromHashValue("slatLocked", nil, func(val) {
+			props.UpdateManager.FromHashValue("slatLocked", 1, func(val) {
 				if (val) {
 					if (slatLockGoing == 0) {
 						slatLockGoing = 1;
@@ -165,10 +185,10 @@ var canvas_upperECAM = {
 		];
 		
 		obj.update_items_fadec_powered_n1 = [
-			props.UpdateManager.FromHashValue("N1_1", 0.01, func(val) {
+			props.UpdateManager.FromHashValue("N1_1", 0.1, func(val) {
 				obj["N11-needle"].setRotation((val + 90) * D2R);
 			}),
-			props.UpdateManager.FromHashValue("N1_2", 0.01, func(val) {
+			props.UpdateManager.FromHashValue("N1_2", 0.1, func(val) {
 				obj["N12-needle"].setRotation((val + 90) * D2R);
 			}),
 			props.UpdateManager.FromHashValue("N1_actual_1", 0.025, func(val) {
@@ -179,47 +199,43 @@ var canvas_upperECAM = {
 				obj["N12"].setText(sprintf("%s", math.floor(val + 0.05)));
 				obj["N12-decimal"].setText(sprintf("%s", int(10 * math.mod(val + 0.05, 1))));
 			}),
-			props.UpdateManager.FromHashValue("N1_lim", 0.01, func(val) {
+			props.UpdateManager.FromHashValue("N1_lim", 0.1, func(val) {
 				obj["N11-ylim"].setRotation((val + 90) * D2R);
 				obj["N12-ylim"].setRotation((val + 90) * D2R);
 			}),
-			props.UpdateManager.FromHashValue("N1thr_1", 0.01, func(val) {
+			props.UpdateManager.FromHashValue("N1thr_1", 0.1, func(val) {
 				obj["N11-thr"].setRotation((val + 90) * D2R);
 			}),
-			props.UpdateManager.FromHashValue("N1thr_2", 0.01, func(val) {
+			props.UpdateManager.FromHashValue("N1thr_2", 0.1, func(val) {
 				obj["N12-thr"].setRotation((val + 90) * D2R);
-			}),
-			props.UpdateManager.FromHashList(["reverser_1","eng1_n1","eng1_epr","N1_mode_1"], nil, func(val) {
-				obj.updateFadecN1Power1(val);
-			}),
-			props.UpdateManager.FromHashList(["reverser_2","eng2_n1","eng2_epr","N1_mode_2"], nil, func(val) {
-				obj.updateFadecN1Power2(val);
 			}),
 		];
 		
 		obj.update_items_fadec_powered_epr = [
-			props.UpdateManager.FromHashValue("EPR_1", 0.01, func(val) {
+			props.UpdateManager.FromHashValue("EPR_1", 0.1, func(val) {
 				obj["EPR1-needle"].setRotation((val + 90) * D2R);
 			}),
-			props.UpdateManager.FromHashValue("EPR_2", 0.01, func(val) {
+			props.UpdateManager.FromHashValue("EPR_2", 0.1, func(val) {
 				obj["EPR2-needle"].setRotation((val + 90) * D2R);
 			}),
 			props.UpdateManager.FromHashValue("EPR_actual_1", 0.0001, func(val) {
-				obj["EPR1"].setText(sprintf("%1.0f", math.floor(val)));
-				obj["EPR1-decimal"].setText(sprintf("%03d", (val - int(val)) * 1000));
+				epr1 = val + 0.0005;
+				obj["EPR1"].setText(sprintf("%1.0f", math.floor(epr1)));
+				obj["EPR1-decimal"].setText(sprintf("%03d", (epr1 - int(epr1)) * 1000));
 			}),
 			props.UpdateManager.FromHashValue("EPR_actual_2", 0.0001, func(val) {
-				obj["EPR2"].setText(sprintf("%1.0f", math.floor(val)));
-				obj["EPR2-decimal"].setText(sprintf("%03d", (val - int(val)) * 1000));
+				epr2 = val + 0.0005;
+				obj["EPR2"].setText(sprintf("%1.0f", math.floor(epr2)));
+				obj["EPR2-decimal"].setText(sprintf("%03d", (epr2 - int(epr2)) * 1000));
 			}),
-			props.UpdateManager.FromHashValue("EPR_lim", 0.005, func(val) {
+			props.UpdateManager.FromHashValue("EPR_lim", 0.1, func(val) {
 				obj["EPR1-ylim"].setRotation((val + 90) * D2R);
 				obj["EPR2-ylim"].setRotation((val + 90) * D2R);
 			}),
-			props.UpdateManager.FromHashValue("EPRthr_1", 0.005, func(val) {
+			props.UpdateManager.FromHashValue("EPRthr_1", 0.1, func(val) {
 				obj["EPR1-thr"].setRotation((val + 90) * D2R);
 			}),
-			props.UpdateManager.FromHashValue("EPRthr_2", 0.005, func(val) {
+			props.UpdateManager.FromHashValue("EPRthr_2", 0.1, func(val) {
 				obj["EPR2-thr"].setRotation((val + 90) * D2R);
 			}),
 		];
@@ -280,9 +296,10 @@ var canvas_upperECAM = {
 			props.UpdateManager.FromHashValue("thrustLimit", nil, func(val) {
 				obj["EPRLim-mode"].setText(sprintf("%s", val));
 			}),
-			props.UpdateManager.FromHashValue("eprLimit", 0.0005, func(val) {
-				obj["EPRLim"].setText(sprintf("%1.0f", math.floor(val)));
-				obj["EPRLim-decimal"].setText(sprintf("%03d", (val - int(val)) * 1000));
+			props.UpdateManager.FromHashValue("eprLimit", 0.0001, func(val) {
+				eprLim = val + 0.0005;
+				obj["EPRLim"].setText(sprintf("%1.0f", math.floor(eprLim)));
+				obj["EPRLim-decimal"].setText(sprintf("%03d", (eprLim - int(eprLim)) * 1000));
 			}),
 			props.UpdateManager.FromHashList(["fadecPower1", "fadecPower2", "fadecPowerStart","thrustLimit"], nil, func(val) {
 				if (val.fadecPower1 or val.fadecPower2 or val.fadecPowerStart) {
@@ -313,8 +330,8 @@ var canvas_upperECAM = {
 					obj["FlxLimTemp"].hide();
 				}
 			}),
-			props.UpdateManager.FromHashValue("N1_mode_1", nil, func(val) {
-				if (fadec.FADEC.Eng1.n1.getValue() == 1 and val) {
+			props.UpdateManager.FromHashList(["eng1_n1", "N1_mode_1"], 1, func(val) {
+				if (val.eng1_n1 and val.N1_mode_1) {
 					obj["N11-thr"].show();
 					obj["N11-ylim"].hide(); # Keep it hidden, since N1 mode limit calculation is not done yet
 				} else {
@@ -322,8 +339,8 @@ var canvas_upperECAM = {
 					obj["N11-ylim"].hide();
 				}
 			}),
-			props.UpdateManager.FromHashValue("N1_mode_2", nil, func(val) {
-				if (fadec.FADEC.Eng2.n1.getValue() == 1 and val) {
+			props.UpdateManager.FromHashList(["eng2_n1", "N1_mode_2"], 1, func(val) {
+				if (val.eng2_n1 == 1 and val.N1_mode_2) {
 					obj["N12-thr"].show();
 					obj["N12-ylim"].hide(); # Keep it hidden, since N1 mode limit calculation is not done yet
 				} else {
@@ -337,13 +354,13 @@ var canvas_upperECAM = {
 			props.UpdateManager.FromHashValue("egt_1", 0.5, func(val) {
 				obj["EGT1"].setText(sprintf("%s", math.round(val)));
 			}),
-			props.UpdateManager.FromHashValue("egt_1_needle", 0.01, func(val) {
+			props.UpdateManager.FromHashValue("egt_1_needle", 0.1, func(val) {
 				obj["EGT1-needle"].setRotation((val + 90) * D2R);
 			}),
 			props.UpdateManager.FromHashValue("egt_2", 0.5, func(val) {
 				obj["EGT2"].setText(sprintf("%s", math.round(val)));
 			}),
-			props.UpdateManager.FromHashValue("egt_2_needle", 0.01, func(val) {
+			props.UpdateManager.FromHashValue("egt_2_needle", 0.1, func(val) {
 				obj["EGT2-needle"].setRotation((val + 90) * D2R);
 			}),
 		];
@@ -434,29 +451,13 @@ var canvas_upperECAM = {
 		obj.createListenerForLine("/ECAM/rightmsg/linec7", ECAM_line7rc, "ECAMR7");
 		obj.createListenerForLine("/ECAM/rightmsg/linec8", ECAM_line8rc, "ECAMR8");
 		
-		obj["ECAML1"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAML2"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAML3"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAML4"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAML5"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAML6"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAML7"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAML8"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAMR1"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAMR2"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAMR3"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAMR4"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAMR5"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAMR6"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAMR7"].setFont("LiberationMonoCustom.ttf");
-		obj["ECAMR8"].setFont("LiberationMonoCustom.ttf");
-		
 		# cache
 		obj._cachedN1 = [nil, nil];
 		obj._cachedN2 = [nil, nil];
 		obj._cachedEGT = [nil, nil];
 		obj._cachedEPR = [nil, nil];
 		obj._cachedFF = [nil, nil];
+		obj._doneNoPower = 0;
 		
 		obj.updateFadecN1Power1({reverser_1: 0, eng1_n1: 0, eng1_epr: 0, N1_mode_1: 0});
 		obj.updateFadecN1Power2({reverser_2: 0, eng2_n1: 0, eng2_epr: 0, N1_mode_2: 0});
@@ -545,6 +546,18 @@ var canvas_upperECAM = {
 		}
 		if (fadec.FADEC.Eng2.ff != me._cachedFF[1]) {
 			me.updateFF2();
+		}
+		
+		if (notification.fadecPower1 or notification.fadecPower2 or notification.fadecPowerStart) {
+			me._doneNoPower = 0;
+			me.updateFadecN1Power1(notification);
+			me.updateFadecN1Power2(notification);
+		} else {
+			if (!me._doneNoPower) {
+				me._doneNoPower = 1;
+				me.updateFadecN1Power1(notification);
+				me.updateFadecN1Power2(notification);
+			}
 		}
 		
 		if (notification.eng1_n1 or notification.eng2_n1) {
@@ -853,6 +866,7 @@ var canvas_upperECAM = {
 				me["EPR1-thr"].hide();
 			}
 		} else {
+			# This is for CFM only -- the IAE show / hiding is done via an emesary node. Potentially they can be merged.
 			if (val.reverser_1 < 0.01 and val.eng1_n1 == 1) {
 				me["N11-thr"].show();
 			} else {
@@ -913,28 +927,38 @@ var canvas_upperECAM = {
 			me["Test_text"].show();
 		}
 	},
+	off: 0,
+	on: 0,
 	powerTransient: func() {
 		if (systems.ELEC.Bus.acEss.getValue() >= 110) {
-			if (du3_offtime.getValue() + 3 < pts.Sim.Time.elapsedSec.getValue()) {
-				if (pts.Gear.wow[0].getValue()) {
-					if (!acconfig.getBoolValue() and !du3_test.getBoolValue()) {
+			if (!me.on) {
+				if (du3_offtime.getValue() + 3 < pts.Sim.Time.elapsedSec.getValue()) {
+					if (pts.Gear.wow[0].getValue()) {
+						if (!acconfig.getBoolValue() and !du3_test.getBoolValue()) {
+							du3_test.setValue(1);
+							du3_test_amount.setValue(math.round((rand() * 5 ) + 35, 0.1));
+							du3_test_time.setValue(pts.Sim.Time.elapsedSec.getValue());
+						} else if (acconfig.getBoolValue() and !du3_test.getBoolValue()) {
+							du3_test.setValue(1);
+							du3_test_amount.setValue(math.round((rand() * 5 ) + 35, 0.1));
+							du3_test_time.setValue(pts.Sim.Time.elapsedSec.getValue() - 30);
+						}
+					} else {
 						du3_test.setValue(1);
-						du3_test_amount.setValue(math.round((rand() * 5 ) + 35, 0.1));
-						du3_test_time.setValue(pts.Sim.Time.elapsedSec.getValue());
-					} else if (acconfig.getBoolValue() and !du3_test.getBoolValue()) {
-						du3_test.setValue(1);
-						du3_test_amount.setValue(math.round((rand() * 5 ) + 35, 0.1));
-						du3_test_time.setValue(pts.Sim.Time.elapsedSec.getValue() - 30);
+						du3_test_amount.setValue(0);
+						du3_test_time.setValue(-100);
 					}
-				} else {
-					du3_test.setValue(1);
-					du3_test_amount.setValue(0);
-					du3_test_time.setValue(-100);
 				}
+				me.off = 0;
+				me.on = 1;
 			}
 		} else {
-			du3_test.setValue(0);
-			du3_offtime.setValue(pts.Sim.Time.elapsedSec.getValue());
+			if (!me.off) {
+				du3_test.setValue(0);
+				du3_offtime.setValue(pts.Sim.Time.elapsedSec.getValue());
+				me.off = 1;
+				me.on = 0;
+			}
 		}
 	},
 	updatePower: func() {
@@ -990,10 +1014,9 @@ var UpperECAMRecipient =
 var A320EWD = UpperECAMRecipient.new("A320 E/WD");
 emesary.GlobalTransmitter.Register(A320EWD);
 
-input = {
+var input = {
 	fuelTotalLbs: "/consumables/fuel/total-fuel-lbs",
-	acconfigUnits: "/systems/acconfig/options/weight-kgs",
-	slatLocked: "/fdm/jsbsim/fcs/slat-locked",
+	slatLocked: "/fdm/jsbsim/fcs/sfcc/slat-locked",
 	
 	# N1 parameters
 	N1_1: "/ECAM/Upper/N1[0]",

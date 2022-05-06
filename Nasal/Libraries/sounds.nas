@@ -7,6 +7,11 @@
 # Sounds #
 ##########
 
+var playSoundOnce = func(path,delay) {
+	setprop(path,1);
+	settimer(func {setprop(path,0);},delay);
+}
+
 setlistener("/sim/sounde/btn1", func {
 	if (!getprop("/sim/sounde/btn1")) {
 		return;
@@ -113,8 +118,8 @@ var relayExt = func {
 	settimer(func {setprop("/sim/sounde/relay-ext",0);},0.35);
 }
 
-setlistener("/systems/electrical/sources/bat-1/contact", relayBatt1, nil, 0);
-setlistener("/systems/electrical/sources/bat-2/contact", relayBatt2, nil, 0);
+setlistener("/systems/electrical/sources/bat-1/bcl-supply", relayBatt1, nil, 0);
+setlistener("/systems/electrical/sources/bat-2/bcl-supply", relayBatt2, nil, 0);
 setlistener("/systems/electrical/relay/apu-glc/contact-pos", relayApu, nil, 0);
 setlistener("/systems/electrical/relay/ext-epc/contact-pos", relayExt, nil, 0);
 
@@ -123,3 +128,10 @@ var pushbutton = func() {
 	pushbuttonSound.setValue(1);
 	settimer(func {pushbuttonSound.setValue(0);},0.20);
 }
+
+setlistener("/sim/model/door-positions/doorc/lock-status",func(lock) {
+	if (lock.getValue() == 1) 
+		playSoundOnce("/sim/sounde/doorc_locking",0.5);
+	else
+		playSoundOnce("/sim/sounde/doorc_unlocking",0.5);
+},0,0);

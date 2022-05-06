@@ -79,10 +79,19 @@ var init = func {
 }
 
 var draw = func{
+	if (me.model.wp.hidden == 1 or me.model.name == "(DECEL)" or me.model.name == "(T/C)" or me.model.name == "(T/D)" or me.model.name == "(LIM)") {
+		me.wp_sym.hide();
+		me.text_wps.hide();
+		if (me.text_alt != nil) {
+			me.text_alt.hide();
+		}
+		return;
+	}
+	
 	var wp_group = me.element;
 	var alt = me.model.alt;
 	var i = me.model.idx;
-	var vnav_actv = getprop(me.options.ver_ctrl) == me.options.managed_val;
+	var vnav_actv = getprop(me.options.spd_ctrl) == 1;
 	var curwp = getprop(me.options.current_wp);
 	if(alt > 0){
 		var wp_d = me.model.wp.distance_along_route;

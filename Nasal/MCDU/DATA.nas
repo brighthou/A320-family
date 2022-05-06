@@ -11,13 +11,13 @@ var dataInput = func(key, i) {
 		setprop("MCDU[" ~ i ~ "]/page", "GPSMON");
 	} elsif (key == "L5") {
 		if (canvas_mcdu.myClosestAirport[i] != nil) {
-					canvas_mcdu.myClosestAirport[i].del();
+			canvas_mcdu.myClosestAirport[i].del();
 		}
 		canvas_mcdu.myClosestAirport[i] = nil;
 		canvas_mcdu.myClosestAirport[i] = closestAirportPage.new(i);
 		setprop("MCDU[" ~ i ~ "]/page", "CLOSESTAIRPORT");
 	} elsif (key == "R5") {
-		setprop("MCDU[" ~ i ~ "]/page", "PRINTFUNC");
+		mcdu_message(i, "PRINTER NOT AVAILABLE");
 	}
 }
 
@@ -58,5 +58,17 @@ var printInput2 = func(key, i) {
 		setprop("FMGC/print/mcdu/page2/R3req", 1);
 	} elsif (key == "R4") { 
 		setprop("FMGC/print/mcdu/page2/R4req", 1);
+	}
+}
+
+var data2Input = func(key, i) {
+	if (key == "L5") {
+		if (canvas_mcdu.myCLBWIND[i] == nil) {
+			canvas_mcdu.myCLBWIND[i] = windCLBPage.new(i);
+		} else {
+			canvas_mcdu.myCLBWIND[i].reload();
+		}
+		fmgc.windController.accessPage[i] = "DATA2";
+		setprop("MCDU[" ~ i ~ "]/page", "WINDCLB");
 	}
 }

@@ -46,6 +46,7 @@ var Misc = {
 };
 
 var Position = {
+	airborne5Secs: props.globals.getNode("/systems/fmgc/airborne-5-secs"),
 	gearAglFtTemp: 0,
 	gearAglFt: props.globals.getNode("/position/gear-agl-ft", 1),
 	indicatedAltitudeFt: props.globals.getNode("/instrumentation/altimeter/indicated-altitude-ft", 1),
@@ -173,7 +174,8 @@ var Custom = {
 		spdManaged: props.globals.getNode("/it-autoflight/input/spd-managed", 1),
 	},
 	Output: {
-		fmaPower: props.globals.initNode("/it-autoflight/output/fma-pwr", 0, "BOOL"),
+		fmaPower: 0,
+		vsFCU: props.globals.initNode("/it-autoflight/output/vs-fcu-display", "", "STRING"),
 	},
 	Sound: {
 		athrOff: props.globals.initNode("/it-autoflight/sound/athrsound", 0, "BOOL"),
@@ -196,6 +198,7 @@ var ITAF = {
 		Input.hdg.setValue(360);
 		Input.alt.setValue(10000);
 		Input.vs.setValue(0);
+		Custom.Output.vsFCU.setValue(left(sprintf("%+05.0f",0),3));
 		Input.fpa.setValue(0);
 		Input.lat.setValue(9);
 		Input.vert.setValue(9);
@@ -227,7 +230,7 @@ var ITAF = {
 		Text.lat.setValue(" ");
 		Text.vert.setValue(" ");
 		Custom.showHdg.setBoolValue(1);
-		Custom.Output.fmaPower.setBoolValue(1);
+		Custom.Output.fmaPower = 1;
 		ManagedSPD.stop();
 		loopTimer.start();
 		slowLoopTimer.start();
@@ -251,6 +254,10 @@ var ITAF = {
 		Position.gearAglFtTemp = Position.gearAglFt.getValue();
 		Internal.vsTemp = Internal.vs.getValue();
 		Position.indicatedAltitudeFtTemp = Position.indicatedAltitudeFt.getValue();
+		
+		# Update VLS / VMAX for autothrust
+		FMGCNodes.vmax.setValue(FMGCInternal.maxspeed);
+		FMGCNodes.vlsMin.setValue(FMGCInternal.vls_min);
 		
 		# LNAV Engagement
 		if (Output.lnavArm.getBoolValue()) {
@@ -359,9 +366,9 @@ var ITAF = {
 		# Preselect Heading
 		if (Output.latTemp != 0 and Output.latTemp != 9) { # Modes that always show HDG
 			if (Custom.hdgTime.getValue() + 45 >= Misc.elapsedSec.getValue()) {
-				setprop("it-autoflight/custom/show-hdg", 1);
+				Custom.showHdg.setBoolValue(1);
 			} else {
-				setprop("it-autoflight/custom/show-hdg", 0);
+				Custom.showHdg.setBoolValue(0);
 			}
 		}
 		
@@ -426,24 +433,19 @@ var ITAF = {
 				}
 				Internal.lnavAdvanceNm.setValue(FPLN.turnDist);
 				
-				# Advance logic done by flightplan controller
-				if (FPLN.wp0Dist.getValue() <= FPLN.turnDist and !Gear.wow1.getBoolValue()) {
+				if (FPLN.wp0Dist.getValue() <= FPLN.turnDist and !Gear.wow1.getBoolValue() and fmgc.flightPlanController.flightplans[2].getWP(FPLN.currentWpTemp).fly_type == "flyBy") {
+					flightPlanController.autoSequencing();
+				} elsif (FPLN.wp0Dist.getValue() <= 0.15) {
 					flightPlanController.autoSequencing();
 				}
-				
-				#if (FPLN.wp0Dist.getValue() <= FPLN.turnDist and !Gear.wow1.getBoolValue() and fmgc.flightPlanController.flightplans[2].getWP(FPLN.currentWpTemp).fly_type == "flyBy") {
-				#	flightPlanController.autoSequencing();
-				#} elsif (FPLN.wp0Dist.getValue() <= 0.1) {
-				#	flightPlanController.autoSequencing();
-				#}
 			}
 		}
 	},
 	ap1Master: func(s) {
 		if (s == 1) {
-			if (Output.vert.getValue() != 6 and !Gear.wow1.getBoolValue() and !Gear.wow2.getBoolValue() and systems.ELEC.Bus.acEss.getValue() >= 110 and fbw.FBW.apOff == 0 and Position.gearAglFt.getValue() >= 100) {
-				me.revertBasicMode();
+			if (Output.vert.getValue() != 6 and !Gear.wow1.getBoolValue() and !Gear.wow2.getBoolValue() and FMGCNodes.Power.FMGC1Powered.getBoolValue() and fbw.FBW.apOff == 0 and Position.gearAglFt.getValue() >= 100 and Position.airborne5Secs.getBoolValue()) {
 				Output.ap1.setBoolValue(1);
+				me.updateFma();
 				Output.latTemp = Output.lat.getValue();
 				if (Output.ap2.getBoolValue() and !Output.apprArm.getBoolValue() and Output.latTemp != 2 and Output.latTemp != 4) {
 					me.ap2Master(0);
@@ -459,12 +461,13 @@ var ITAF = {
 		if (Input.ap1.getBoolValue() != Output.ap1Temp) {
 			Input.ap1.setBoolValue(Output.ap1Temp);
 		}
+		fmaAp();
 	},
 	ap2Master: func(s) {
 		if (s == 1) {
-			if (Output.vert.getValue() != 6 and !Gear.wow1.getBoolValue() and !Gear.wow2.getBoolValue() and systems.ELEC.Bus.acEss.getValue() >= 110 and fbw.FBW.apOff == 0 and Position.gearAglFt.getValue() >= 100) {
-				me.revertBasicMode();
+			if (Output.vert.getValue() != 6 and !Gear.wow1.getBoolValue() and !Gear.wow2.getBoolValue() and FMGCNodes.Power.FMGC2Powered.getBoolValue() and fbw.FBW.apOff == 0 and Position.gearAglFt.getValue() >= 100 and Position.airborne5Secs.getBoolValue()) {
 				Output.ap2.setBoolValue(1);
+				me.updateFma();
 				Output.latTemp = Output.lat.getValue();
 				if (Output.ap1.getBoolValue() and !Output.apprArm.getBoolValue() and Output.latTemp != 2 and Output.latTemp != 4) {
 					me.ap1Master(0);
@@ -480,6 +483,7 @@ var ITAF = {
 		if (Input.ap2.getBoolValue() != Output.ap2Temp) {
 			Input.ap2.setBoolValue(Output.ap2Temp);
 		}
+		fmaAp();
 	},
 	apOffFunction: func() {
 		if (!Output.ap1.getBoolValue() and !Output.ap2.getBoolValue()) { # Only do if both APs are off
@@ -492,7 +496,7 @@ var ITAF = {
 	},
 	athrMaster: func(s) {
 		if (s == 1) {
-			if (systems.ELEC.Bus.acEss.getValue() >= 110 and !pts.FMGC.CasCompare.casRejectAll.getBoolValue() and fbw.FBW.apOff == 0) {
+			if ((FMGCNodes.Power.FMGC1Powered.getBoolValue() or FMGCNodes.Power.FMGC2Powered.getBoolValue()) and !pts.FMGC.CasCompare.casRejectAll.getBoolValue() and fbw.FBW.apOff == 0) {
 				Output.athr.setBoolValue(1);
 				Custom.ThrLock.setValue(0);
 				Custom.Sound.enableAthrOff = 1;
@@ -509,6 +513,7 @@ var ITAF = {
 		if (Input.athr.getBoolValue() != Output.athrTemp) {
 			Input.athr.setBoolValue(Output.athrTemp);
 		}
+		fmaAthr();
 	},
 	fd1Master: func(s) {
 		if (s == 1) {
@@ -524,6 +529,7 @@ var ITAF = {
 		if (Input.fd1.getBoolValue() != Output.fd1Temp) {
 			Input.fd1.setBoolValue(Output.fd1Temp);
 		}
+		fmaFd();
 	},
 	fd2Master: func(s) {
 		if (s == 1) {
@@ -539,6 +545,7 @@ var ITAF = {
 		if (Input.fd2.getBoolValue() != Output.fd2Temp) {
 			Input.fd2.setBoolValue(Output.fd2Temp);
 		}
+		fmaFd();
 	},
 	setLatMode: func(n) {
 		Output.vertTemp = Output.vert.getValue();
@@ -590,7 +597,9 @@ var ITAF = {
 			Text.lat.setValue("T/O");
 			me.armTextCheck();
 		} else if (n == 9) { # NONE
+			Output.lnavArm.setBoolValue(0);
 			Output.locArm.setBoolValue(0);
+			Output.apprArm.setBoolValue(0);
 			Output.lat.setValue(9);
 			Custom.showHdg.setBoolValue(1);
 			Text.lat.setValue(" ");
@@ -846,13 +855,13 @@ var ITAF = {
 		}
 	},
 	syncKts: func() {
-		Input.kts.setValue(math.clamp(math.round(Velocities.indicatedAirspeedKt.getValue()), 100, 350));
+		Input.kts.setValue(math.clamp(math.round(Velocities.indicatedAirspeedKt.getValue()), 100, 399));
 	},
 	syncKtsGa: func() { # Same as syncKts, except doesn't go below V2
-		Input.kts.setValue(math.clamp(math.round(Velocities.indicatedAirspeedKt.getValue()), FMGCInternal.v2, 350));
+		Input.kts.setValue(math.clamp(math.round(Velocities.indicatedAirspeedKt.getValue()), FMGCInternal.v2, 399));
 	},
 	syncMach: func() {
-		Input.mach.setValue(math.clamp(math.round(Velocities.indicatedMach.getValue(), 0.001), 0.5, 0.82));
+		Input.mach.setValue(math.clamp(math.round(Velocities.indicatedMach.getValue(), 0.001), 0.1, 0.99));
 	},
 	syncHdg: func() {
 		Input.hdg.setValue(math.round(Internal.hdgPredicted.getValue())); # Switches to track automatically
@@ -861,8 +870,11 @@ var ITAF = {
 		Input.alt.setValue(math.clamp(math.round(Internal.altPredicted.getValue(), 100), 0, 50000));
 		Internal.alt.setValue(math.clamp(math.round(Internal.altPredicted.getValue(), 100), 0, 50000));
 	},
+	tempVS: 0,
 	syncVs: func() {
-		Input.vs.setValue(math.clamp(math.round(Internal.vs.getValue(), 100), -6000, 6000));
+		me.tempVS = math.clamp(math.round(Internal.vs.getValue(), 100), -6000, 6000);
+		Input.vs.setValue(me.tempVS);
+		fmgc.Custom.Output.vsFCU.setValue(left(sprintf("%+05.0f",me.tempVS),3));
 	},
 	syncFpa: func() {
 		Input.fpa.setValue(math.clamp(math.round(Internal.fpa.getValue(), 0.1), -9.9, 9.9));
@@ -873,9 +885,10 @@ var ITAF = {
 			me.setLatMode(9);
 			me.setVertMode(9);
 			me.setLatArm(0);
-			Custom.Output.fmaPower.setBoolValue(0);
+			Custom.Output.fmaPower = 0;
 		} else {
-			Custom.Output.fmaPower.setBoolValue(1);
+			if (!Custom.Output.fmaPower) showAllBoxes();
+			Custom.Output.fmaPower = 1;
 			me.revertBasicMode();
 		}
 	},
@@ -998,6 +1011,7 @@ setlistener("/it-autoflight/input/lat", func {
 	Output.ap2Temp = Output.ap2.getBoolValue();
 	Output.fd1Temp = Output.fd1.getBoolValue();
 	Output.fd2Temp = Output.fd2.getBoolValue();
+	
 	if (!Gear.wow1.getBoolValue() and !Gear.wow2.getBoolValue()) {
 		if (Output.ap1Temp or Output.ap2Temp or Output.fd1Temp or Output.fd2Temp) {
 			ITAF.setLatMode(Input.latTemp);
@@ -1021,17 +1035,41 @@ setlistener("/it-autoflight/input/vert", func {
 	}
 });
 
+# Mode Reversions
+setlistener(pts.Systems.Navigation.ADR.Output.overspeed, func(v) {
+	if (v.getBoolValue() and !Output.ap1.getBoolValue() and !Output.ap2.getBoolValue() and Output.athr.getBoolValue() and Modes.PFD.FMA.pitchMode.getValue() == "OP CLB" and Modes.PFD.FMA.throttle.getValue() == "THR CLB") {
+		Input.fd1.setValue(0);
+		Input.fd2.setValue(0);
+		ecam.aural[5].setBoolValue(0);
+		settimer(func() {
+			ecam.aural[5].setBoolValue(1);
+		}, 0.15);
+	}
+}, 0, 0);
+
+setlistener(pts.Systems.Navigation.ADR.Output.underspeed, func(v) {
+	if (v.getBoolValue() and !Output.ap1.getBoolValue() and !Output.ap2.getBoolValue() and Output.athr.getBoolValue() and Modes.PFD.FMA.pitchMode.getValue() == "OP DES" and Modes.PFD.FMA.throttle.getValue() == "THR IDLE") {
+		Input.fd1.setValue(0);
+		Input.fd2.setValue(0);
+		ecam.aural[5].setBoolValue(0);
+		settimer(func() {
+			ecam.aural[5].setBoolValue(1);
+		}, 0.15);
+	}
+}, 0, 0);
+
+
 setlistener("/sim/signals/fdm-initialized", func {
 	ITAF.init();
 });
 
 # For Canvas Nav Display.
-setlistener("/it-autoflight/input/hdg", func {
-	setprop("/autopilot/settings/heading-bug-deg", Input.hdg.getValue());
+setlistener("/it-autoflight/input/hdg", func() {
+	pts.Autopilot.Settings.headingBugDeg.setValue(Input.hdg.getValue());
 }, 0, 0);
 
-setlistener("/it-autoflight/internal/alt", func {
-	setprop("/autopilot/settings/target-altitude-ft", Internal.alt.getValue());
+setlistener("/it-autoflight/internal/alt", func() {
+	pts.Autopilot.Settings.targetAltitudeFt.setValue(Internal.alt.getValue());
 }, 0, 0);
 
 var loopTimer = maketimer(0.1, ITAF, ITAF.loop);

@@ -513,7 +513,7 @@ setlistener("/it-autoflight/output/appr-armed", func {
 });
 
 # AP
-var ap = func {
+var fmaAp = func {
 	ap1 = Output.ap1.getValue();
 	ap2 = Output.ap2.getValue();
 	newap = Modes.PFD.FMA.apMode.getValue();
@@ -529,7 +529,7 @@ var ap = func {
 }
 
 # FD
-var fd = func {
+var fmaFd = func {
 	fd1 = Output.fd1.getValue();
 	fd2 = Output.fd2.getValue();
 	newfd = Modes.PFD.FMA.fdMode.getValue();
@@ -544,8 +544,8 @@ var fd = func {
 	}
 }
 
-# AT
-var atMode = func {
+# A/THR
+var fmaAthr = func {
 	at = Output.athr.getValue();
 	if (at and Modes.PFD.FMA.athrMode.getValue() != "A/THR") {
 		Modes.PFD.FMA.athrMode.setValue("A/THR");
@@ -554,51 +554,25 @@ var atMode = func {
 	}
 }
 
-var boxchk = func {
-	if ((Output.ap1.getValue() or Output.ap2.getValue() or Output.fd1.getValue() or Output.fd2.getValue()) and !Custom.Output.fmaPower.getValue()) {
-		Input.lat.setValue(3);
-		boxchk_b();
-	}
-}
-
-var boxchk_b = func {
+var elapsedTimeBoxes = nil;
+var showAllBoxes = func {
+	elapsedTimeBoxes = pts.Sim.Time.elapsedSec.getValue();
 	if (Modes.PFD.FMA.rollMode.getValue() != " ") {
-		Modes.PFD.FMA.rollModeTime.setValue(pts.Sim.Time.elapsedSec.getValue());
+		Modes.PFD.FMA.rollModeTime.setValue(elapsedTimeBoxes);
 	}
 	if (Modes.PFD.FMA.pitchMode.getValue() != " ") {
-		Modes.PFD.FMA.pitchModeTime.setValue(pts.Sim.Time.elapsedSec.getValue());
+		Modes.PFD.FMA.pitchModeTime.setValue(elapsedTimeBoxes);
 	}
 	if (Modes.PFD.FMA.rollModeArmed.getValue() != " ") {
-		Modes.PFD.FMA.rollModeArmedTime.setValue(pts.Sim.Time.elapsedSec.getValue());
+		Modes.PFD.FMA.rollModeArmedTime.setValue(elapsedTimeBoxes);
 	}
 	if (Modes.PFD.FMA.pitchModeArmed.getValue() != " ") {
-		Modes.PFD.FMA.pitchModeArmedTime.setValue(pts.Sim.Time.elapsedSec.getValue());
+		Modes.PFD.FMA.pitchModeArmedTime.setValue(elapsedTimeBoxes);
 	}
 	if (Modes.PFD.FMA.pitchMode2Armed.getValue() != " ") {
-		Modes.PFD.FMA.pitchMode2ArmedTime.setValue(pts.Sim.Time.elapsedSec.getValue());
+		Modes.PFD.FMA.pitchMode2ArmedTime.setValue(elapsedTimeBoxes);
 	}
 }
-
-# Update AP FD ATHR
-setlistener("/it-autoflight/output/ap1", func {
-	ap();
-	boxchk();
-});
-setlistener("/it-autoflight/output/ap2", func {
-	ap();
-	boxchk();
-});
-setlistener("/it-autoflight/output/fd1", func {
-	fd();
-	boxchk();
-});
-setlistener("/it-autoflight/output/fd2", func {
-	fd();
-	boxchk();
-});
-setlistener("/it-autoflight/output/athr", func {
-	atMode();
-});
 
 # Boxes
 setlistener("/modes/pfd/fma/ap-mode", func {
@@ -670,6 +644,6 @@ setlistener("/modes/pfd/fma/pitch-mode2-armed", func {
 	}
 });
 
-setlistener("sim/signals/fdm-initialized", func {
+setlistener("/sim/signals/fdm-initialized", func {
 	init();
 });
